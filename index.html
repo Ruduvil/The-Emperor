@@ -241,6 +241,16 @@ html, body {
   letter-spacing: 2px;
   pointer-events: none;
 }
+#keysHint {
+  position: absolute;
+  top: 8px; right: 10px;
+  z-index: 20;
+  font-size: 8px;
+  color: #2a2035;
+  letter-spacing: 2px;
+  pointer-events: none;
+  font-family: 'Cinzel', serif;
+}
 
 /* ── TRANSITION ── */
 #transition {
@@ -256,15 +266,28 @@ html, body {
 
 /* ── LANGUAGE MENU ── */
 #langMenu {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: #000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 110;
+  z-index: 9000;
   gap: 6px;
+}
+#langMenuHint {
+  position: fixed;
+  top: 10px;
+  left: 0; right: 0;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  color: #2a2035;
+  letter-spacing: 3px;
+  z-index: 9001;
+  pointer-events: none;
+  line-height: 1.8;
 }
 .lang-title {
   font-family: 'UnifrakturMaguntia', cursive;
@@ -278,17 +301,16 @@ html, body {
   font-family: 'Cinzel', serif;
   font-size: 13px;
   letter-spacing: 4px;
-  color: #4a3f55;
+  color: #2a2035;
   padding: 10px 40px;
   border: 1px solid #1a1520;
-  cursor: none;
-  transition: color 0.2s, border-color 0.2s, text-shadow 0.2s;
+  transition: color 0.15s, border-color 0.15s, text-shadow 0.15s;
   text-transform: uppercase;
   min-width: 260px;
   text-align: center;
   position: relative;
 }
-.lang-option:hover, .lang-option.selected {
+.lang-option.selected {
   color: #c9a84c;
   border-color: #c9a84c;
   text-shadow: 0 0 12px rgba(201,168,76,0.5);
@@ -296,14 +318,12 @@ html, body {
 .lang-option .lang-native {
   display: block;
   font-size: 10px;
-  color: #2a2035;
+  color: #1a1020;
   letter-spacing: 2px;
   margin-top: 3px;
-  transition: color 0.2s;
+  transition: color 0.15s;
 }
-.lang-option:hover .lang-native, .lang-option.selected .lang-native {
-  color: #786040;
-}
+.lang-option.selected .lang-native { color: #786040; }
 .lang-selector-arrow {
   position: absolute;
   left: 14px;
@@ -313,6 +333,15 @@ html, body {
   font-size: 10px;
   opacity: 0;
   transition: opacity 0.15s;
+}
+.lang-option.selected .lang-selector-arrow { opacity: 1; }
+.lang-confirm {
+  margin-top: 24px;
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  color: #4a9eff;
+  letter-spacing: 4px;
+  animation: blink 1.5s step-end infinite;
 }
 .lang-option.selected .lang-selector-arrow { opacity: 1; }
 
@@ -335,24 +364,36 @@ html, body {
 
 <div id="cursor"></div>
 
+<!-- KEYBOARD HINT (fixed top, always visible during lang menu) -->
+<div id="langMenuHint">
+  W / S · ENTER &nbsp;·&nbsp; W / S · ENTER &nbsp;·&nbsp; W / S · Enter キー
+</div>
+
 <!-- LANGUAGE MENU -->
 <div id="langMenu">
   <div class="lang-title">Choose your tongue</div>
-  <div class="lang-option selected" data-lang="en" tabindex="0">
+  <div class="lang-option selected" data-lang="en">
     <span class="lang-selector-arrow">▶</span>
     English
     <span class="lang-native">english</span>
   </div>
-  <div class="lang-option" data-lang="pt" tabindex="0">
+  <div class="lang-option" data-lang="pt">
     <span class="lang-selector-arrow">▶</span>
     Português
     <span class="lang-native">português de portugal</span>
   </div>
-  <div class="lang-option" data-lang="ja" tabindex="0">
+  <div class="lang-option" data-lang="ja">
     <span class="lang-selector-arrow">▶</span>
     日本語
     <span class="lang-native">japanese · 日本語</span>
   </div>
+  <div class="lang-confirm">▼ W / S to navigate · Enter to confirm</div>
+</div>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen" style="display:none; position:fixed; inset:0; background:#000; z-index:8000; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
+  <div id="loadingTitle" style="font-family:'UnifrakturMaguntia',serif; font-size:42px; color:#c9a84c; text-shadow:0 0 30px rgba(201,168,76,0.5); letter-spacing:6px;">Emperor</div>
+  <div id="loadingDots" style="font-family:'Cinzel',serif; font-size:10px; color:#4a3f55; letter-spacing:6px;">· · ·</div>
 </div>
 
 <!-- TITLE -->
@@ -371,6 +412,7 @@ html, body {
     <div class="hud-status">◈ formless ◈ forgotten</div>
   </div>
   <div id="controlsHint">WASD / ARROWS · ENTER to interact</div>
+  <div id="keysHint">WASD · 移動 · Mover</div>
 
   <!-- DIALOGUE BOX -->
   <div id="dialogueBox">
@@ -444,29 +486,70 @@ const C = {
 
 // ── INPUT ─────────────────────────────────────────────────────────────
 const keys = {};
-const gameWrapperEl = document.getElementById('gameWrapper');
 
-// Make wrapper focusable so keyboard events fire reliably
-gameWrapperEl.setAttribute('tabindex', '0');
-gameWrapperEl.focus();
+// Lang menu state — declared early
+const langCodes = ['en','pt','ja'];
+let selectedLangIdx = 0;
+let currentLang = 'en';
+let langMenuActive = true;
+let gameReady = false;    // true after loading screen done
+let inputLocked = false;  // blanket lock during transitions
 
-// Listen on both wrapper and document for maximum compatibility
-function handleKeyDown(e) {
+// Cooldown counter — prevents any key from firing for N frames after unlock
+let inputCooldownFrames = 0;
+
+function onKeyDown(e) {
+  // Always track raw key state
   keys[e.code] = true;
-  // Prevent arrow keys / space from scrolling the page
+
+  // Block page scroll
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
     e.preventDefault();
   }
-}
-function handleKeyUp(e) { keys[e.code] = false; }
-gameWrapperEl.addEventListener('keydown', handleKeyDown);
-document.addEventListener('keydown', handleKeyDown);
-gameWrapperEl.addEventListener('keyup', handleKeyUp);
-document.addEventListener('keyup', handleKeyUp);
 
-// Re-focus wrapper if user clicks anywhere on page
-document.addEventListener('click', () => gameWrapperEl.focus());
-gameWrapperEl.addEventListener('click', () => gameWrapperEl.focus());
+  // Block everything during transitions
+  if (inputLocked) return;
+
+  // ── LANG MENU ────────────────────────────────────────────────────────
+  if (langMenuActive) {
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+      selectedLangIdx = (selectedLangIdx - 1 + langCodes.length) % langCodes.length;
+      document.querySelectorAll('.lang-option').forEach((o,i) =>
+        o.classList.toggle('selected', i === selectedLangIdx));
+    } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+      selectedLangIdx = (selectedLangIdx + 1) % langCodes.length;
+      document.querySelectorAll('.lang-option').forEach((o,i) =>
+        o.classList.toggle('selected', i === selectedLangIdx));
+    } else if (e.code === 'Enter' || e.code === 'KeyZ') {
+      currentLang = langCodes[selectedLangIdx];
+      langMenuActive = false;
+      inputLocked = true;
+      confirmLanguage();
+    }
+    return; // never fall through while lang menu active
+  }
+
+  // ── TITLE SCREEN ─────────────────────────────────────────────────────
+  if (!gameStarted && gameReady) {
+    if (e.code === 'Enter' || e.code === 'KeyZ' || e.code === 'Space') {
+      startGame();
+    }
+    return;
+  }
+
+  // ── DIALOGUE / CUTSCENE ──────────────────────────────────────────────
+  if (gameStarted && inDialogue && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) {
+    advanceDialogue(); return;
+  }
+  if (gameStarted && inCutscene && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) {
+    advanceCutscene(); return;
+  }
+}
+
+function onKeyUp(e) { keys[e.code] = false; }
+
+document.addEventListener('keydown', onKeyDown);
+document.addEventListener('keyup', onKeyUp);
 
 // ── CURSOR (fixed, follows mouse anywhere on page) ────────────────────
 const cursorEl = document.getElementById('cursor');
@@ -478,14 +561,11 @@ document.addEventListener('mouseleave', () => {
   cursorEl.style.left = '-20px';
   cursorEl.style.top = '-20px';
 });
-// Hide system cursor on wrapper
-gameWrapperEl.style.cursor = 'none';
 
 // ── RESPONSIVE SCALE ──────────────────────────────────────────────────
+const gameWrapperEl = document.getElementById('gameWrapper');
 function scaleGame() {
-  const maxW = window.innerWidth;
-  const maxH = window.innerHeight;
-  const scale = Math.min(maxW / 640, maxH / 480, 1); // never scale up past 1x
+  const scale = Math.min(window.innerWidth / 640, window.innerHeight / 480, 1);
   gameWrapperEl.style.transform = `scale(${scale})`;
 }
 scaleGame();
@@ -1126,7 +1206,7 @@ function drawInteractPrompt() {
   ctx.fillStyle = C.gold;
   ctx.font = '8px "Cinzel", serif';
   ctx.textAlign = 'center';
-  const _labels = t('interactLabels');
+  const _labels = tr('interactLabels');
   const label = nearNPC.type === 'warrior' ? _labels.warrior : nearNPC.type === 'king' ? _labels.king : _labels.throne;
   const w = ctx.measureText(label).width + 10;
   ctx.fillStyle = 'rgba(10,6,8,0.85)';
@@ -1199,7 +1279,16 @@ function updateParticles() {
 
 // ── MOVEMENT ──────────────────────────────────────────────────────────
 function updatePlayer() {
-  if (inDialogue || inCutscene) return;
+  if (!gameStarted || inDialogue || inCutscene) return;
+
+  // Drain cooldown — ignore all input while cooling down
+  if (inputCooldownFrames > 0) {
+    inputCooldownFrames--;
+    // clear movement keys during cooldown so nothing moves
+    keys['KeyW']=keys['KeyS']=keys['KeyA']=keys['KeyD']=false;
+    keys['ArrowUp']=keys['ArrowDown']=keys['ArrowLeft']=keys['ArrowRight']=false;
+    return;
+  }
 
   let dx = 0, dy = 0;
   if (keys['KeyW']||keys['ArrowUp'])    dy = -1;
@@ -1285,7 +1374,7 @@ function showDlgLine(line) {
 
 function advanceDialogue() {
   if (dlgTyping) {
-    // skip to end
+    stopTypeText();
     if (dlgQueue[dlgIndex]) dlgTextEl.textContent = dlgQueue[dlgIndex].text;
     dlgTyping = false;
     dlgCont.style.display = 'block';
@@ -1295,6 +1384,8 @@ function advanceDialogue() {
   if (dlgIndex >= dlgQueue.length) {
     dlgBox.style.display = 'none';
     inDialogue = false;
+    for (const k in keys) keys[k] = false;
+    inputCooldownFrames = 30;
     return;
   }
   showDlgLine(dlgQueue[dlgIndex]);
@@ -1530,6 +1621,7 @@ let showingStepAway = false;
 
 function advanceCutscene() {
   if (cutTypingActive) {
+    stopTypeText();
     cutTextEl.textContent = cutScenes[cutSceneIdx].dlg[cutDlgIdx].text;
     cutTypingActive = false;
     cutCont.style.display = 'block';
@@ -1542,6 +1634,7 @@ function advanceCutscene() {
     const p = document.getElementById('stepAwayPrompt');
     if (p) p.remove();
     for (const k in keys) keys[k] = false;
+    inputCooldownFrames = 40;
     return;
   }
   cutDlgIdx++;
@@ -1569,31 +1662,46 @@ function showStepAwayCard() {
   cutNameEl.textContent = '—';
   cutNameEl.className = 'dlg-name';
   drawPortrait(cpCtx, 'narrator', '—');
-  typeText(cutTextEl, t('stepAway'), { style: {} }, () => {});
+  typeText(cutTextEl, tr('stepAway'), { style: {} }, () => {});
   setTimeout(() => {
     const existing = document.getElementById('stepAwayPrompt');
     if (existing) existing.remove();
     const prompt = document.createElement('div');
     prompt.id = 'stepAwayPrompt';
     prompt.style.cssText = 'position:absolute;bottom:6px;right:14px;font-size:10px;color:#4a3f55;letter-spacing:2px;animation:blink 1s step-end infinite;font-family:"Cinzel",serif;';
-    prompt.textContent = t('stepAwayPrompt');
+    prompt.textContent = tr('stepAwayPrompt');
     document.getElementById('cutsceneDialogue').appendChild(prompt);
   }, 700);
 }
 
 // ── TYPEWRITER ────────────────────────────────────────────────────────
+let activeTypeInterval = null;
+
 function typeText(el, text, contEl, cb) {
+  // Always kill any running typewriter first
+  if (activeTypeInterval) {
+    clearInterval(activeTypeInterval);
+    activeTypeInterval = null;
+  }
   el.textContent = '';
   let i = 0;
-  const interval = setInterval(()=>{
+  activeTypeInterval = setInterval(() => {
     if (i < text.length) {
       el.textContent += text[i++];
     } else {
-      clearInterval(interval);
-      contEl.style.display = 'block';
+      clearInterval(activeTypeInterval);
+      activeTypeInterval = null;
+      if (contEl && contEl.style) contEl.style.display = 'block';
       if (cb) cb();
     }
   }, 22);
+}
+
+function stopTypeText() {
+  if (activeTypeInterval) {
+    clearInterval(activeTypeInterval);
+    activeTypeInterval = null;
+  }
 }
 
 // ── PORTRAIT DRAWING ──────────────────────────────────────────────────
@@ -1687,7 +1795,7 @@ function render() {
 }
 
 // ── LANGUAGE SYSTEM ───────────────────────────────────────────────────
-let currentLang = 'en';
+// currentLang and langCodes declared above near input system
 
 const LANG = {
   en: {
@@ -2096,7 +2204,7 @@ const LANG = {
   },
 };
 
-function t(key) { return LANG[currentLang][key]; }
+function tr(key) { return LANG[currentLang][key]; }
 
 // ── GAME LOOP ─────────────────────────────────────────────────────────
 let lastTime = 0;
@@ -2110,56 +2218,48 @@ function loop(ts) {
 
 // ── LANGUAGE MENU ─────────────────────────────────────────────────────
 const langMenuEl = document.getElementById('langMenu');
-const langOptions = document.querySelectorAll('.lang-option');
-let selectedLangIdx = 0;
-const langCodes = ['en','pt','ja'];
-
-langOptions.forEach((opt, i) => {
-  opt.addEventListener('mouseenter', () => {
-    langOptions.forEach(o => o.classList.remove('selected'));
-    opt.classList.add('selected');
-    selectedLangIdx = i;
-  });
-  opt.addEventListener('click', () => {
-    currentLang = langCodes[i];
-    confirmLanguage();
-  });
-});
+const langMenuHintEl = document.getElementById('langMenuHint');
+// No mouse handlers — keyboard only via onKeyDown
 
 // Single unified keydown handler (works on both document and wrapper)
-function handleGameKeys(e) {
-  if (langMenuEl.style.display !== 'none' && langMenuEl.style.opacity !== '0') {
-    if (e.code === 'ArrowUp' || e.code === 'KeyW') {
-      selectedLangIdx = (selectedLangIdx - 1 + langCodes.length) % langCodes.length;
-      langOptions.forEach(o => o.classList.remove('selected'));
-      langOptions[selectedLangIdx].classList.add('selected');
-      e.preventDefault();
-    } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
-      selectedLangIdx = (selectedLangIdx + 1) % langCodes.length;
-      langOptions.forEach(o => o.classList.remove('selected'));
-      langOptions[selectedLangIdx].classList.add('selected');
-      e.preventDefault();
-    } else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyZ') {
-      currentLang = langCodes[selectedLangIdx];
-      confirmLanguage();
-      e.preventDefault();
-    }
-    return;
-  }
-  if (!gameStarted && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) startGame();
-  if (gameStarted && inDialogue && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) advanceDialogue();
-  if (gameStarted && inCutscene && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) advanceCutscene();
-}
-document.addEventListener('keydown', handleGameKeys);
-gameWrapperEl.addEventListener('keydown', handleGameKeys);
+function handleGameKeys(e) {}
+
 
 function confirmLanguage() {
-  langMenuEl.style.transition = 'opacity 0.8s';
+  langMenuEl.style.transition = 'opacity 0.6s';
   langMenuEl.style.opacity = '0';
+  langMenuHintEl.style.transition = 'opacity 0.6s';
+  langMenuHintEl.style.opacity = '0';
+
   setTimeout(() => {
     langMenuEl.style.display = 'none';
+    langMenuHintEl.style.display = 'none';
+
+    const loadingEl = document.getElementById('loadingScreen');
+    loadingEl.style.display = 'flex';
+    loadingEl.style.opacity = '1';
+
+    const dots = document.getElementById('loadingDots');
+    const dotFrames = ['· · ·', '◈ · ·', '· ◈ ·', '· · ◈'];
+    let di = 0;
+    const dotInterval = setInterval(() => { dots.textContent = dotFrames[di++ % dotFrames.length]; }, 300);
+
     applyLanguage();
-  }, 800);
+    requestAnimationFrame(loop);
+
+    setTimeout(() => {
+      clearInterval(dotInterval);
+      loadingEl.style.transition = 'opacity 0.8s';
+      loadingEl.style.opacity = '0';
+      setTimeout(() => {
+        loadingEl.style.display = 'none';
+        for (const k in keys) keys[k] = false;
+        inputLocked = false;
+        gameReady = true;
+        inputCooldownFrames = 60;
+      }, 800);
+    }, 2000);
+  }, 650);
 }
 
 function applyLanguage() {
@@ -2184,19 +2284,18 @@ const titleScreenEl = document.getElementById('titleScreen');
 function startGame() {
   if (gameStarted) return;
   gameStarted = true;
-  gameWrapperEl.focus();
-  titleScreenEl.style.transition='opacity 1.5s';
-  titleScreenEl.style.opacity='0';
-  setTimeout(()=>{ titleScreenEl.style.display='none'; },1500);
-
-  setTimeout(()=>{
+  // Flush all keys and lock input for 2s so spamming Enter doesn't skip intro
+  for (const k in keys) keys[k] = false;
+  inputCooldownFrames = 120;
+  titleScreenEl.style.transition = 'opacity 1.5s';
+  titleScreenEl.style.opacity = '0';
+  setTimeout(() => { titleScreenEl.style.display = 'none'; }, 1500);
+  setTimeout(() => {
     startCutscene([{ bg:'stone', chars:[], dlg: LANG[currentLang].intro }]);
   }, 1600);
-
-  requestAnimationFrame(loop);
 }
 
-document.querySelector('#titleScreen').addEventListener('click', startGame);
+document.querySelector('#titleScreen').addEventListener('click', () => { if (gameReady && !gameStarted) startGame(); });
 
 // ── REBIND DIALOGUE FUNCTIONS ─────────────────────────────────────────
 function rebindDialogueFns() {
