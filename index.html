@@ -6,14 +6,18 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Cinzel:wght@400;700&display=swap');
 
+/* Safe fallback if fonts fail to load */
+.title-main, .hud-name, .dlg-name, .lang-title { font-family: 'UnifrakturMaguntia', 'Times New Roman', serif; }
+.title-sub, .title-prompt, .lang-option, #dlgText, #cutDlgText, #hud, #controlsHint { font-family: 'Cinzel', 'Georgia', serif; }
+
 * { margin:0; padding:0; box-sizing:border-box; }
 
-body {
+html, body {
+  width: 100%; height: 100%;
   background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
   overflow: hidden;
   font-family: 'Cinzel', serif;
   cursor: none;
@@ -26,11 +30,14 @@ body {
   overflow: hidden;
   image-rendering: pixelated;
   box-shadow: 0 0 80px rgba(74,158,255,0.15), 0 0 200px rgba(0,0,0,0.9);
+  /* Scale down on small screens */
+  transform-origin: center center;
+  flex-shrink: 0;
 }
 
 /* ── CUSTOM CURSOR ── */
 #cursor {
-  position: fixed;
+  position: absolute;
   width: 8px; height: 8px;
   background: #4a9eff;
   border-radius: 50%;
@@ -38,6 +45,7 @@ body {
   z-index: 9999;
   transform: translate(-50%,-50%);
   box-shadow: 0 0 6px 2px rgba(74,158,255,0.7);
+  top: 0; left: 0;
 }
 
 /* ── CANVAS ── */
@@ -46,6 +54,7 @@ body {
   top: 0; left: 0;
   width: 640px; height: 480px;
   image-rendering: pixelated;
+  outline: none;
 }
 
 /* ── TITLE SCREEN ── */
@@ -433,17 +442,53 @@ const C = {
 
 // ── INPUT ─────────────────────────────────────────────────────────────
 const keys = {};
-document.addEventListener('keydown', e => {
-  keys[e.code] = true;
-});
-document.addEventListener('keyup', e => { keys[e.code] = false; });
+const gameWrapperEl = document.getElementById('gameWrapper');
 
-// cursor follow
+// Make wrapper focusable so keyboard events fire reliably
+gameWrapperEl.setAttribute('tabindex', '0');
+gameWrapperEl.focus();
+
+// Listen on both wrapper and document for maximum compatibility
+function handleKeyDown(e) {
+  keys[e.code] = true;
+  // Prevent arrow keys / space from scrolling the page
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
+    e.preventDefault();
+  }
+}
+function handleKeyUp(e) { keys[e.code] = false; }
+gameWrapperEl.addEventListener('keydown', handleKeyDown);
+document.addEventListener('keydown', handleKeyDown);
+gameWrapperEl.addEventListener('keyup', handleKeyUp);
+document.addEventListener('keyup', handleKeyUp);
+
+// Re-focus wrapper if user clicks anywhere on page
+document.addEventListener('click', () => gameWrapperEl.focus());
+gameWrapperEl.addEventListener('click', () => gameWrapperEl.focus());
+
+// ── CURSOR (relative to wrapper) ─────────────────────────────────────
 const cursorEl = document.getElementById('cursor');
-document.addEventListener('mousemove', e => {
-  cursorEl.style.left = e.clientX + 'px';
-  cursorEl.style.top = e.clientY + 'px';
+gameWrapperEl.addEventListener('mousemove', e => {
+  const rect = gameWrapperEl.getBoundingClientRect();
+  const scaleX = 640 / rect.width;
+  const scaleY = 480 / rect.height;
+  const x = (e.clientX - rect.left);
+  const y = (e.clientY - rect.top);
+  cursorEl.style.left = x + 'px';
+  cursorEl.style.top = y + 'px';
 });
+// Hide system cursor on wrapper
+gameWrapperEl.style.cursor = 'none';
+
+// ── RESPONSIVE SCALE ──────────────────────────────────────────────────
+function scaleGame() {
+  const maxW = window.innerWidth;
+  const maxH = window.innerHeight;
+  const scale = Math.min(maxW / 640, maxH / 480, 1); // never scale up past 1x
+  gameWrapperEl.style.transform = `scale(${scale})`;
+}
+scaleGame();
+window.addEventListener('resize', scaleGame);
 
 // ── GAME STATE ────────────────────────────────────────────────────────
 let gameStarted = false;
@@ -2080,7 +2125,8 @@ langOptions.forEach((opt, i) => {
   });
 });
 
-document.addEventListener('keydown', e => {
+// Single unified keydown handler (works on both document and wrapper)
+function handleGameKeys(e) {
   if (langMenuEl.style.display !== 'none' && langMenuEl.style.opacity !== '0') {
     if (e.code === 'ArrowUp' || e.code === 'KeyW') {
       selectedLangIdx = (selectedLangIdx - 1 + langCodes.length) % langCodes.length;
@@ -2102,7 +2148,9 @@ document.addEventListener('keydown', e => {
   if (!gameStarted && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) startGame();
   if (gameStarted && inDialogue && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) advanceDialogue();
   if (gameStarted && inCutscene && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) advanceCutscene();
-});
+}
+document.addEventListener('keydown', handleGameKeys);
+gameWrapperEl.addEventListener('keydown', handleGameKeys);
 
 function confirmLanguage() {
   langMenuEl.style.transition = 'opacity 0.8s';
@@ -2135,6 +2183,7 @@ const titleScreenEl = document.getElementById('titleScreen');
 function startGame() {
   if (gameStarted) return;
   gameStarted = true;
+  gameWrapperEl.focus();
   titleScreenEl.style.transition='opacity 1.5s';
   titleScreenEl.style.opacity='0';
   setTimeout(()=>{ titleScreenEl.style.display='none'; },1500);
