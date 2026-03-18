@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Emperor — The Soul Remembers</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Cinzel:wght@400;700&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+  font-family: 'Cinzel', serif;
+  cursor: none;
+}
+
+#gameWrapper {
+  position: relative;
+  width: 640px;
+  height: 480px;
+  overflow: hidden;
+  image-rendering: pixelated;
+  box-shadow: 0 0 80px rgba(74,158,255,0.15), 0 0 200px rgba(0,0,0,0.9);
+}
+
+/* ── CUSTOM CURSOR ── */
+#cursor {
+  position: fixed;
+  width: 8px; height: 8px;
+  background: #4a9eff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+  box-shadow: 0 0 6px 2px rgba(74,158,255,0.7);
+}
+
+/* ── CANVAS ── */
+#gameCanvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 640px; height: 480px;
+  image-rendering: pixelated;
+}
+
+/* ── TITLE SCREEN ── */
+#titleScreen {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  gap: 8px;
+}
+.title-main {
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 64px;
+  color: #c9a84c;
+  text-shadow: 0 0 30px rgba(201,168,76,0.6);
+  animation: titleGlow 3s ease-in-out infinite;
+  letter-spacing: 6px;
+}
+.title-sub {
+  font-size: 11px;
+  color: #4a3f55;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  margin-bottom: 40px;
+}
+.title-prompt {
+  font-size: 11px;
+  color: #4a9eff;
+  letter-spacing: 4px;
+  animation: blink 1.5s step-end infinite;
+}
+@keyframes titleGlow {
+  0%,100%{text-shadow:0 0 20px rgba(201,168,76,0.4);}
+  50%{text-shadow:0 0 50px rgba(201,168,76,0.9),0 0 80px rgba(201,168,76,0.3);}
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── DIALOGUE BOX ── */
+#dialogueBox {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 140px;
+  background: #0a0608;
+  border-top: 2px solid #c9a84c;
+  z-index: 50;
+  display: none;
+  padding: 0;
+}
+.dlg-speaker-bar {
+  background: #120e16;
+  border-bottom: 1px solid rgba(201,168,76,0.3);
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dlg-portrait {
+  width: 28px; height: 28px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+.dlg-name {
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 16px;
+  color: #c9a84c;
+  text-shadow: 0 0 8px rgba(201,168,76,0.5);
+}
+.dlg-name.soul-name { color: #4a9eff; text-shadow: 0 0 8px rgba(74,158,255,0.5); }
+.dlg-name.warrior-name { color: #c8b8d8; }
+.dlg-name.king-name { color: #e8c96a; }
+.dlg-text-area {
+  padding: 12px 16px 8px;
+  position: relative;
+}
+#dlgText {
+  font-size: 12px;
+  color: #ffffff;
+  line-height: 1.8;
+  min-height: 60px;
+  letter-spacing: 0.5px;
+}
+#dlgContinue {
+  position: absolute;
+  bottom: 6px; right: 14px;
+  font-size: 10px;
+  color: #4a9eff;
+  animation: blink 1s step-end infinite;
+  display: none;
+}
+
+/* ── CUTSCENE OVERLAY ── */
+#cutscene {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 80;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+.cutscene-bars-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 60px;
+  background: #000;
+  z-index: 2;
+}
+.cutscene-bars-bot {
+  position: absolute;
+  bottom: 140px; left: 0; right: 0;
+  height: 60px;
+  background: #000;
+  z-index: 2;
+}
+#cutsceneCanvas {
+  position: absolute;
+  top: 60px;
+  width: 640px;
+  height: calc(480px - 200px);
+  image-rendering: pixelated;
+}
+#cutsceneDialogue {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 140px;
+  background: #0a0608;
+  border-top: 2px solid #c9a84c;
+  z-index: 3;
+}
+#cutDlgText {
+  font-size: 12px;
+  color: #ffffff;
+  line-height: 1.8;
+  min-height: 60px;
+  letter-spacing: 0.5px;
+}
+
+/* ── VIGNETTE ── */
+#vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,0.75) 100%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── HUD ── */
+#hud {
+  position: absolute;
+  top: 8px; left: 10px;
+  z-index: 20;
+  pointer-events: none;
+}
+.hud-name {
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 22px;
+  color: #c9a84c;
+  opacity: 0.75;
+  text-shadow: 0 0 10px rgba(201,168,76,0.4);
+  transition: color 0.5s, text-shadow 0.5s;
+}
+.hud-status {
+  font-size: 8px;
+  color: #4a9eff;
+  letter-spacing: 2px;
+  opacity: 0.7;
+}
+
+/* ── CONTROLS HINT ── */
+#controlsHint {
+  position: absolute;
+  bottom: 6px; right: 10px;
+  z-index: 20;
+  font-size: 8px;
+  color: #2a2035;
+  letter-spacing: 2px;
+  pointer-events: none;
+}
+
+/* ── TRANSITION ── */
+#transition {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+#transition.fade-in { opacity: 1; pointer-events: all; }
+
+/* ── LANGUAGE MENU ── */
+#langMenu {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 110;
+  gap: 6px;
+}
+.lang-title {
+  font-family: 'UnifrakturMaguntia', cursive;
+  font-size: 18px;
+  color: #4a3f55;
+  letter-spacing: 6px;
+  margin-bottom: 28px;
+  text-transform: uppercase;
+}
+.lang-option {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: #4a3f55;
+  padding: 10px 40px;
+  border: 1px solid #1a1520;
+  cursor: none;
+  transition: color 0.2s, border-color 0.2s, text-shadow 0.2s;
+  text-transform: uppercase;
+  min-width: 260px;
+  text-align: center;
+  position: relative;
+}
+.lang-option:hover, .lang-option.selected {
+  color: #c9a84c;
+  border-color: #c9a84c;
+  text-shadow: 0 0 12px rgba(201,168,76,0.5);
+}
+.lang-option .lang-native {
+  display: block;
+  font-size: 10px;
+  color: #2a2035;
+  letter-spacing: 2px;
+  margin-top: 3px;
+  transition: color 0.2s;
+}
+.lang-option:hover .lang-native, .lang-option.selected .lang-native {
+  color: #786040;
+}
+.lang-selector-arrow {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #c9a84c;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.lang-option.selected .lang-selector-arrow { opacity: 1; }
+
+/* blood/spark particles */
+.particle {
+  position: absolute;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 60;
+  image-rendering: pixelated;
+  animation: particleFly 0.6s ease-out forwards;
+}
+@keyframes particleFly {
+  to { opacity: 0; transform: translate(var(--px), var(--py)) scale(0.2); }
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+
+<!-- LANGUAGE MENU -->
+<div id="langMenu">
+  <div class="lang-title">Choose your tongue</div>
+  <div class="lang-option selected" data-lang="en" tabindex="0">
+    <span class="lang-selector-arrow">▶</span>
+    English
+    <span class="lang-native">english</span>
+  </div>
+  <div class="lang-option" data-lang="pt" tabindex="0">
+    <span class="lang-selector-arrow">▶</span>
+    Português
+    <span class="lang-native">português de portugal</span>
+  </div>
+  <div class="lang-option" data-lang="ja" tabindex="0">
+    <span class="lang-selector-arrow">▶</span>
+    日本語
+    <span class="lang-native">japanese · 日本語</span>
+  </div>
+</div>
+
+<!-- TITLE -->
+<div id="titleScreen">
+  <div class="title-main">Emperor</div>
+  <div class="title-sub">He Who Crashed the Worlds</div>
+  <div class="title-prompt">▶ press enter or space to begin</div>
+</div>
+
+<div id="gameWrapper">
+  <canvas id="gameCanvas" width="640" height="480"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-name" id="hudName">Soul</div>
+    <div class="hud-status">◈ formless ◈ forgotten</div>
+  </div>
+  <div id="controlsHint">WASD / ARROWS · ENTER to interact</div>
+
+  <!-- DIALOGUE BOX -->
+  <div id="dialogueBox">
+    <div class="dlg-speaker-bar">
+      <canvas class="dlg-portrait" id="dlgPortrait" width="28" height="28"></canvas>
+      <div class="dlg-name" id="dlgName">—</div>
+    </div>
+    <div class="dlg-text-area">
+      <div id="dlgText"></div>
+      <div id="dlgContinue">▼ continue</div>
+    </div>
+  </div>
+
+  <!-- CUTSCENE -->
+  <div id="cutscene">
+    <div class="cutscene-bars-top"></div>
+    <canvas id="cutsceneCanvas" width="640" height="260"></canvas>
+    <div class="cutscene-bars-bot"></div>
+    <div id="cutsceneDialogue">
+      <div class="dlg-speaker-bar">
+        <canvas class="dlg-portrait" id="cutDlgPortrait" width="28" height="28"></canvas>
+        <div class="dlg-name" id="cutDlgName">—</div>
+      </div>
+      <div class="dlg-text-area">
+        <div id="cutDlgText"></div>
+        <div id="cutDlgContinue" style="position:absolute;bottom:6px;right:14px;font-size:10px;color:#4a9eff;animation:blink 1s step-end infinite;display:none;">▼ continue</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="vignette"></div>
+  <div id="transition"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  EMPEROR — OMORI-STYLE 2D RPG ENGINE
+// ═══════════════════════════════════════════════════════════════════
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const W = 640, H = 480;
+const TILE = 32;
+const COLS = W / TILE; // 20
+const ROWS = H / TILE; // 15
+
+// ── PALETTE ──────────────────────────────────────────────────────────
+const C = {
+  black:   '#0a0608',
+  deep:    '#0d0a10',
+  stone:   '#1a1520',
+  stone2:  '#221c2a',
+  stone3:  '#2a2035',
+  gold:    '#c9a84c',
+  gold2:   '#e8c96a',
+  soul:    '#4a9eff',
+  soul2:   '#7bc4ff',
+  blood:   '#8b1a1a',
+  blood2:  '#c0392b',
+  dim:     '#4a3f55',
+  text:    '#c8b8d8',
+  candle:  '#ff9a3c',
+  candle2: '#ffcc66',
+  floor1:  '#1a1020',
+  floor2:  '#221528',
+  wall1:   '#0d0a10',
+  wall2:   '#0f0c13',
+};
+
+// ── INPUT ─────────────────────────────────────────────────────────────
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// cursor follow
+const cursorEl = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursorEl.style.left = e.clientX + 'px';
+  cursorEl.style.top = e.clientY + 'px';
+});
+
+// ── GAME STATE ────────────────────────────────────────────────────────
+let gameStarted = false;
+let inDialogue = false;
+let inCutscene = false;
+let dlgQueue = [];
+let dlgIndex = 0;
+let dlgTyping = false;
+let dlgTypedLen = 0;
+let dlgTypedTimer = 0;
+let cutQueue = [];
+let cutIndex = 0;
+let cutTyping = false;
+let cutTypedLen = 0;
+let hudFlickTimer = 0;
+let hudState = 0;
+let interactCooldown = 0;
+
+// ── PLAYER (SOUL ORB) ─────────────────────────────────────────────────
+const player = {
+  x: 9 * TILE + TILE/2,   // pixel position (center)
+  y: 8 * TILE + TILE/2,
+  vx: 0, vy: 0,
+  speed: 2.5,
+  facing: 'down',
+  moving: false,
+  bobTimer: 0,
+  glowPhase: 0,
+};
+
+// ── CAMERA ────────────────────────────────────────────────────────────
+const cam = { x: 0, y: 0 };
+
+function updateCamera() {
+  cam.x = player.x - W/2;
+  cam.y = player.y - H/2;
+  // clamp to map
+  cam.x = Math.max(0, Math.min(cam.x, mapW * TILE - W));
+  cam.y = Math.max(0, Math.min(cam.y, mapH * TILE - H));
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────
+// 0=floor, 1=wall, 2=pillar, 3=throne_zone, 4=door
+// We'll draw everything procedurally based on tile type
+
+const mapW = 20, mapH = 16;
+
+// Each cell: tile type
+// Legend: 0=floor, 1=solid wall, 2=pillar(solid), 3=altar(solid+interact), 4=floor w/ candle decoration
+const MAP = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,1],  // row 7 has throne at col 9
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+function isSolid(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= mapW || ty >= mapH) return true;
+  const t = MAP[ty][tx];
+  return t === 1 || t === 2 || t === 3;
+}
+
+// ── NPCs / INTERACTABLES ─────────────────────────────────────────────
+const NPCS = [
+  // Warriors (dead — blood on interact)
+  { id:'faith',     x:1*TILE+16,  y:9*TILE+16,  type:'warrior', name:'Warrior of Faith',    color:C.dim,   dlg: dlgFaith   },
+  { id:'doubt',     x:1*TILE+16,  y:11*TILE+16, type:'warrior', name:'Warrior of Doubt',    color:C.dim,   dlg: dlgDoubt   },
+  { id:'duty',      x:1*TILE+16,  y:13*TILE+16, type:'warrior', name:'Warrior of Duty',     color:C.dim,   dlg: dlgDuty    },
+  { id:'fear',      x:18*TILE+16, y:9*TILE+16,  type:'warrior', name:'Warrior of Fear',     color:C.dim,   dlg: dlgFear    },
+  { id:'regret',    x:18*TILE+16, y:11*TILE+16, type:'warrior', name:'Warrior of Regret',   color:C.dim,   dlg: dlgRegret  },
+  { id:'devotion',  x:18*TILE+16, y:13*TILE+16, type:'warrior', name:'Warrior of Devotion', color:C.dim,   dlg: dlgDevotion},
+  { id:'rebellion', x:1*TILE+16,  y:7*TILE+16,  type:'warrior', name:'Warrior of Rebellion',color:C.dim,   dlg: dlgRebellion},
+  // Kings (alive — sparks on interact)
+  { id:'lust',      x:4*TILE+16,  y:3*TILE+16,  type:'king',    name:'Sigil of Lust',       color:C.blood2,dlg: dlgLust    },
+  { id:'pride',     x:15*TILE+16, y:3*TILE+16,  type:'king',    name:'Sigil of Pride',      color:C.gold,  dlg: dlgPride   },
+  { id:'gluttony',  x:9*TILE+16,  y:2*TILE+16,  type:'king',    name:'Sigil of Gluttony',   color:C.gold2, dlg: dlgGluttony},
+  // Throne
+  { id:'throne',    x:9*TILE+16,  y:7*TILE+16,  type:'throne',  name:'The Golden Throne',   color:C.gold,  dlg: dlgThrone  },
+];
+
+// ── DIALOGUE DATA ─────────────────────────────────────────────────────
+// Each entry: { speaker, name, type:'warrior'|'king'|'soul'|'narrator', lines:[] }
+// Cutscenes are arrays of scenes: { bg, chars, dialogue[] }
+
+function dlgFaith() {
+  startCutscene([
+    { bg:'stone', chars:[{who:'warrior_faith', x:160, y:80}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The stone is cold. You drift closer. Something stirs inside it — not waking. Remembering."},
+        {speaker:'warrior',  name:'Faith', text:"...You came back."},
+        {speaker:'warrior',  name:'Faith', text:"I waited. They said you were dead. I waited anyway. That is what faith is — waiting for the thing you cannot prove will return."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'warrior',  name:'Faith', text:"I do not need you to speak. I knew you the moment you entered the room. The blue glow. It is still yours."},
+        {speaker:'warrior',  name:'Faith', text:"I am not awake yet. But I hear you. That is enough. Come back when the time is right, and I will rise."},
+        {speaker:'narrator', name:'—', text:"The statue goes still. But the cold feels different now. Less like stone. More like sleep."},
+      ]
+    }
+  ]);
+}
+function dlgDoubt() {
+  startCutscene([
+    { bg:'stone', chars:[{who:'warrior_doubt', x:160, y:80}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The head is turned. As if expecting someone from the wrong direction."},
+        {speaker:'warrior',  name:'Doubt', text:"Hm. You. I had wondered if I was wrong about you being dead."},
+        {speaker:'warrior',  name:'Doubt', text:"I have had two thousand years to consider every decision you ever made. I still have questions."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'warrior',  name:'Doubt', text:"You destroyed them. The Hutarians. You know that. I think part of you knew it then too, and did it anyway."},
+        {speaker:'warrior',  name:'Doubt', text:"I am not saying that to wound you. I am saying it because someone must. Faith will not. The others will not."},
+        {speaker:'warrior',  name:'Doubt', text:"If you return — really return — you will need someone willing to say the wrong thing. I am still that person. Reluctantly."},
+        {speaker:'narrator', name:'—', text:"A pause. Then, almost too quiet to notice:"},
+        {speaker:'warrior',  name:'Doubt', text:"...I am glad you are not entirely gone."},
+      ]
+    }
+  ]);
+}
+function dlgDuty() {
+  startCutscene([
+    { bg:'stone', chars:[{who:'warrior_duty', x:160, y:80}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The posture is perfect. It has been perfect for two thousand years. Duty does not slouch."},
+        {speaker:'warrior',  name:'Duty', text:"Emperor. The throne is unoccupied. I have been aware of this the entire time."},
+        {speaker:'warrior',  name:'Duty', text:"I have no feelings about your return. I have a function. The function requires you to exist and to sit where you are meant to sit."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'warrior',  name:'Duty', text:"You are not ready yet. I can see that. A soul without a body cannot hold a throne. Regain your form. Then come back."},
+        {speaker:'warrior',  name:'Duty', text:"I have waited two thousand years. I can wait a little longer. That is what duty is."},
+        {speaker:'narrator', name:'—', text:"It does not ask how you are. It does not need to. The task is what matters. The task is always what matters."},
+      ]
+    }
+  ]);
+}
+function dlgFear() {
+  startCutscene([
+    { bg:'stone', chars:[{who:'warrior_fear', x:480, y:80}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The eyes. Red chips in stone. They find you immediately, even without a body to find."},
+        {speaker:'warrior',  name:'Fear', text:"Oh."},
+        {speaker:'warrior',  name:'Fear', text:"Oh no."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'warrior',  name:'Fear', text:"I do not mean that badly. I mean — I knew something was shifting. The air has felt wrong for weeks. I did not know it was you."},
+        {speaker:'warrior',  name:'Fear', text:"You are... smaller than I remembered. Just a light. Just a glow. Is this what you are now?"},
+        {speaker:'warrior',  name:'Fear', text:"I feared you when you were whole. I do not know what I feel about this. It is more uncomfortable, somehow. Grief is worse than fear."},
+        {speaker:'narrator', name:'—', text:"A long silence. The red eyes do not look away."},
+        {speaker:'warrior',  name:'Fear', text:"The green flames. I never saw them turn green for anyone who mattered to you. I want you to know I noticed that."},
+      ]
+    }
+  ]);
+}
+function dlgRegret() {
+  startCutscene([
+    { bg:'stone', chars:[{who:'warrior_regret', x:160, y:80}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The arms are folded. The head is bowed. A thin blue line runs down the stone cheek — carved or wept, impossible to say."},
+        {speaker:'narrator', name:'—', text:"It does not speak first. You drift closer."},
+        {speaker:'warrior',  name:'Regret', text:"..."},
+        {speaker:'warrior',  name:'Regret', text:"I should have said something. Before. There was a moment — I do not know if you remember it — where I could have said something and I did not."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'warrior',  name:'Regret', text:"I have been holding it since then. Two thousand years is a long time to hold something. It does not get lighter."},
+        {speaker:'warrior',  name:'Regret', text:"I am not asking for anything. I just needed you to know that I know. Whatever I failed to do — I carry it."},
+        {speaker:'narrator', name:'—', text:"The stone is warm here, strangely. As if something has been pressed against it from the inside for a very long time."},
+      ]
+    }
+  ]);
+}
+function dlgDevotion() {
+  startCutscene([
+    { bg:'stone', chars:[{who:'warrior_devotion', x:160, y:80}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"There is a heart carved into the chest of this statue. Rough work. Someone who cared more about the act than the craft."},
+        {speaker:'warrior',  name:'Devotion', text:"You are here."},
+        {speaker:'warrior',  name:'Devotion', text:"I do not need to say anything else. You are here and I can feel you and that is the entirety of what I have wanted for two thousand years."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'warrior',  name:'Devotion', text:"Do not apologize. I know you want to. Do not."},
+        {speaker:'warrior',  name:'Devotion', text:"You are what you are. You did what you did. I loved you through all of it. I love what remains of you now. That is not complicated for me."},
+        {speaker:'warrior',  name:'Devotion', text:"Come back properly when you can. I will be here. I will always be here."},
+        {speaker:'narrator', name:'—', text:"The blue glow around you brightens, briefly. Then steadies."},
+      ]
+    }
+  ]);
+}
+function dlgRebellion() {
+  startCutscene([
+    { bg:'stone', chars:[{who:'warrior_rebellion', x:160, y:80}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The arm is raised. It has been raised for two millennia. A broken chain on the wrist."},
+        {speaker:'warrior',  name:'Rebellion', text:"About time."},
+        {speaker:'warrior',  name:'Rebellion', text:"Two thousand years, Emperor. I have been standing here with my arm up for TWO THOUSAND YEARS."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'warrior',  name:'Rebellion', text:"Yes, I know. You died. You came back as a glowing ball. Very dramatic. I have had sufficient time to prepare my opinions."},
+        {speaker:'warrior',  name:'Rebellion', text:"Opinion one: this world is exactly as bad as I told you it would get if you left. Opinion two: the three kings are interesting. I have been watching. They might be worth something."},
+        {speaker:'warrior',  name:'Rebellion', text:"Opinion three: when you reclaim the throne, you are going to need someone who will tell you when you are wrong. That has always been me. Nothing has changed."},
+        {speaker:'narrator', name:'—', text:"A beat. Then:"},
+        {speaker:'warrior',  name:'Rebellion', text:"...Also I missed you. But if you tell the others I said that I will deny it."},
+      ]
+    }
+  ]);
+}
+function dlgLust() {
+  startCutscene([
+    { bg:'dark_altar', chars:[{who:'sigil_red', x:320, y:60}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The sigil pulses with a red that is almost warm. Almost alive. Somewhere in the city, someone is making a decision entirely driven by want."},
+        {speaker:'narrator', name:'—', text:"His name is not recorded here. He does not know he is being watched."},
+        {speaker:'king',     name:'The King of Lust', text:"She left. I did not see it coming — which means I was not watching correctly. I am always watching. I must have looked away."},
+        {speaker:'king',     name:'The King of Lust', text:"Something is different. The city feels like it is holding its breath. I have run this long enough to know what anticipation smells like."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'narrator', name:'—', text:"He cannot see you. He cannot hear you. He is simply there, in his city, restless, waiting for something he cannot name."},
+        {speaker:'narrator', name:'—', text:"The Hutarians knew desire too. But theirs had a bottom. Theirs knew when it had been answered."},
+        {speaker:'narrator', name:'—', text:"You watch him and wonder if there is a Hutarian somewhere in the blood. If the echo can be drawn out. If want can be taught to know itself."},
+      ]
+    }
+  ]);
+}
+function dlgPride() {
+  startCutscene([
+    { bg:'dark_altar', chars:[{who:'sigil_gold', x:320, y:60}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The crown sigil catches the candlelight differently than the others. It does not flicker. It holds."},
+        {speaker:'king',     name:'The King of Pride', text:"The other two are moving. I have noticed. They are converging on something without knowing they are converging."},
+        {speaker:'king',     name:'The King of Pride', text:"I do not converge. I arrive first and I wait. That is the difference between authority and reaction."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'narrator', name:'—', text:"He is not wrong. Of the three, he is the most like what a King should be. The bearing. The silence. The refusal to explain himself."},
+        {speaker:'narrator', name:'—', text:"You remember the Hutarian Kings — the ones who came before you, the ones you served before you surpassed them. This man has their posture."},
+        {speaker:'king',     name:'The King of Pride', text:"Something ancient is moving. I do not know what it is. I do not say that often."},
+        {speaker:'narrator', name:'—', text:"He does not look afraid. He looks, for the first time you have observed him, genuinely curious."},
+        {speaker:'narrator', name:'—', text:"That is interesting. Pride that can still be curious is Pride that has not yet calcified."},
+      ]
+    }
+  ]);
+}
+function dlgGluttony() {
+  startCutscene([
+    { bg:'dark_altar', chars:[{who:'sigil_coin', x:320, y:60}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"The coin sigil rotates slowly. Always counting. Always measuring. Even here, in an ancient church in the dark, something is being tallied."},
+        {speaker:'king',     name:'The King of Gluttony', text:"Something is wrong with the numbers."},
+        {speaker:'king',     name:'The King of Gluttony', text:"Not the money. The money is fine. I mean the other numbers — the ones that tell you how a population is feeling. They are all wrong. Pointing somewhere I do not recognise."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'narrator', name:'—', text:"He is the most unsettled of the three. His entire power rests on predicting what people want. And something has entered the calculation that he has no data for."},
+        {speaker:'king',     name:'The King of Gluttony', text:"Something is coming that has never come before. Everything I have consumed, every system I have built — none of it accounts for this."},
+        {speaker:'narrator', name:'—', text:"Good. Let him not account for it. Let the first thing he has ever faced that cannot be bought teach him what enough means."},
+        {speaker:'narrator', name:'—', text:"That lesson is the only thing that might save him."},
+      ]
+    }
+  ]);
+}
+function dlgThrone() {
+  startCutscene([
+    { bg:'throne_room', chars:[{who:'throne_empty', x:290, y:40}],
+      dlg:[
+        {speaker:'narrator', name:'—', text:"You stop in front of it. The gold catches your light and throws it back at you, blue against gold, and for a moment the throne room looks almost like it did."},
+        {speaker:'narrator', name:'—', text:"Almost."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'narrator', name:'—', text:"You built this. Not the wood and the gold — those are just materials. You built the idea of it. The fact that there exists a place where weight is held and decisions are made and the world is answered for."},
+        {speaker:'narrator', name:'—', text:"It has been empty for two thousand years. The world paved over it and forgot it and built a civilisation of hollow hunger on the same ground."},
+        {speaker:'soul',     name:'Soul', text:"..."},
+        {speaker:'narrator', name:'—', text:"The blue glow reflected in the gold is not nothing. You are still here. You have always been here, in the stone and the light and the grief that built the world."},
+        {speaker:'narrator', name:'—', text:"The three kings are learning. The seven are stirring. The world that was made from your tears is waiting, even if it does not know it is waiting."},
+        {speaker:'narrator', name:'—', text:"Sit down. Not yet — you have no body to sit with. But soon."},
+        {speaker:'narrator', name:'—', text:"You are home."},
+      ]
+    }
+  ]);
+}
+
+// ── DRAWING HELPERS ───────────────────────────────────────────────────
+function px(x) { return Math.round(x); }
+
+function drawRect(x,y,w,h,col) {
+  ctx.fillStyle = col;
+  ctx.fillRect(px(x-cam.x), px(y-cam.y), w, h);
+}
+
+function drawPixelRect(x,y,w,h,col) {
+  ctx.fillStyle = col;
+  ctx.fillRect(px(x-cam.x), px(y-cam.y), w, h);
+}
+
+// ── TILE RENDERER ─────────────────────────────────────────────────────
+function drawTile(tx, ty) {
+  const wx = tx * TILE, wy = ty * TILE;
+  const t = MAP[ty]?.[tx] ?? 1;
+  const sx = px(wx - cam.x), sy = px(wy - cam.y);
+  if (sx > W+TILE || sx < -TILE || sy > H+TILE || sy < -TILE) return;
+
+  if (t === 0 || t === 3 || t === 4) {
+    // floor checkerboard
+    ctx.fillStyle = (tx+ty)%2===0 ? C.floor1 : C.floor2;
+    ctx.fillRect(sx, sy, TILE, TILE);
+  } else if (t === 1) {
+    // wall with horizontal banding
+    ctx.fillStyle = (ty%2===0) ? C.wall1 : C.wall2;
+    ctx.fillRect(sx, sy, TILE, TILE);
+    // mortar lines
+    ctx.fillStyle = '#080408';
+    ctx.fillRect(sx, sy+TILE-2, TILE, 2);
+    ctx.fillRect(sx+TILE-2, sy, 2, TILE);
+  } else if (t === 2) {
+    // floor under pillar
+    ctx.fillStyle = (tx+ty)%2===0 ? C.floor1 : C.floor2;
+    ctx.fillRect(sx, sy, TILE, TILE);
+  }
+}
+
+function drawPillar(tx, ty) {
+  if (MAP[ty]?.[tx] !== 2) return;
+  const wx = tx * TILE, wy = ty * TILE;
+  const sx = px(wx - cam.x), sy = px(wy - cam.y);
+  if (sx > W+TILE || sx < -TILE || sy > H+TILE || sy < -TILE) return;
+
+  // pillar body
+  ctx.fillStyle = C.stone3;
+  ctx.fillRect(sx+6, sy-TILE*0.5, TILE-12, TILE*1.5);
+  // dark sides
+  ctx.fillStyle = C.stone;
+  ctx.fillRect(sx+6, sy-TILE*0.5, 4, TILE*1.5);
+  ctx.fillRect(sx+TILE-10, sy-TILE*0.5, 4, TILE*1.5);
+  // cap
+  ctx.fillStyle = C.stone2;
+  ctx.fillRect(sx+2, sy-TILE*0.5-6, TILE-4, 8);
+  ctx.fillStyle = C.dim;
+  ctx.fillRect(sx+2, sy-TILE*0.5-8, TILE-4, 3);
+}
+
+function drawThroneTile(tx, ty) {
+  if (MAP[ty]?.[tx] !== 3) return;
+  const wx = tx*TILE, wy = ty*TILE;
+  const sx = px(wx-cam.x), sy = px(wy-cam.y);
+  // glow under throne
+  const t = Date.now()/1000;
+  const glow = ctx.createRadialGradient(sx+TILE/2,sy+TILE/2,2,sx+TILE/2,sy+TILE/2,TILE);
+  glow.addColorStop(0, `rgba(201,168,76,${0.15+Math.sin(t)*0.05})`);
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(sx-TILE, sy-TILE, TILE*3, TILE*3);
+  // throne pixel art
+  const gx = sx+2, gy = sy-20;
+  // back
+  ctx.fillStyle = C.stone2;
+  ctx.fillRect(gx+4, gy, 24, 36);
+  // gold trim
+  ctx.fillStyle = C.gold;
+  ctx.fillRect(gx+4, gy, 24, 3); // top
+  ctx.fillRect(gx+4, gy, 3, 36); // left
+  ctx.fillRect(gx+25, gy, 3, 36); // right
+  // seat
+  ctx.fillStyle = C.stone3;
+  ctx.fillRect(gx+2, gy+28, 28, 5);
+  ctx.fillStyle = C.stone2;
+  ctx.fillRect(gx, gy+28, 32, 3);
+  // legs
+  ctx.fillStyle = C.stone;
+  ctx.fillRect(gx+4, gy+33, 6, 10);
+  ctx.fillRect(gx+22, gy+33, 6, 10);
+  // crown spires
+  ctx.fillStyle = C.gold;
+  ctx.fillRect(gx+6, gy-5, 4, 6);
+  ctx.fillRect(gx+13, gy-7, 4, 8);
+  ctx.fillRect(gx+20, gy-5, 4, 6);
+  // armrests
+  ctx.fillRect(gx+1, gy+22, 5, 3);
+  ctx.fillRect(gx+26, gy+22, 5, 3);
+  // gem
+  ctx.fillStyle = C.soul;
+  ctx.fillRect(gx+13, gy+10, 6, 6);
+  ctx.fillStyle = C.soul2;
+  ctx.fillRect(gx+14, gy+11, 3, 3);
+}
+
+// ── NPC RENDERER ──────────────────────────────────────────────────────
+const npcAnim = {};
+
+function drawNPC(npc) {
+  const sx = px(npc.x - cam.x) - 14;
+  const sy = px(npc.y - cam.y) - 28;
+  if (sx > W+32 || sx < -32 || sy > H+32 || sy < -32) return;
+
+  if (!npcAnim[npc.id]) npcAnim[npc.id] = { t: Math.random()*100 };
+  npcAnim[npc.id].t += 0.02;
+  const t = npcAnim[npc.id].t;
+
+  if (npc.type === 'warrior') {
+    drawWarriorSprite(sx, sy, npc.id, t);
+  } else if (npc.type === 'king') {
+    drawKingSymbol(sx, sy, npc.id, t);
+  }
+  // throne drawn separately
+}
+
+function drawWarriorSprite(sx, sy, id, t) {
+  const wobble = Math.sin(t*0.3)*0.5; // very slight
+  const by = Math.round(wobble);
+
+  // stone colour with slight variation per warrior
+  const hues = {faith:'#3a2f45',doubt:'#2e2838',duty:'#322840',fear:'#38202a',regret:'#2a2535',devotion:'#2f2240',rebellion:'#342030'};
+  const hc = hues[id] || '#3a2f45';
+
+  // Body (statue, slightly transparent)
+  ctx.globalAlpha = 0.9;
+  // head
+  ctx.fillStyle = hc;
+  ctx.fillRect(sx+5, sy+by, 18, 14);
+  // body
+  ctx.fillStyle = hc;
+  ctx.fillRect(sx+3, sy+14+by, 22, 18);
+  // arms
+  if (id === 'rebellion') {
+    ctx.fillRect(sx-2, sy+10+by, 6, 14); // raised arm
+    ctx.fillRect(sx+24, sy+14+by, 6, 12);
+  } else {
+    ctx.fillRect(sx-2, sy+14+by, 6, 12);
+    ctx.fillRect(sx+24, sy+14+by, 6, 12);
+  }
+  // legs
+  ctx.fillRect(sx+4, sy+32+by, 8, 12);
+  ctx.fillRect(sx+16, sy+32+by, 8, 12);
+
+  // symbol on chest
+  drawWarriorSymbol(sx+7, sy+17+by, id);
+
+  // subtle glow for alive hint
+  if (id === 'devotion') {
+    ctx.fillStyle = `rgba(192,57,43,${0.2+Math.sin(t)*0.1})`;
+    ctx.fillRect(sx+8, sy+16+by, 12, 10);
+  }
+  if (id === 'fear') {
+    ctx.fillStyle = `rgba(255,0,0,${0.4+Math.sin(t*2)*0.2})`;
+    ctx.fillRect(sx+8, sy+2+by, 4, 4);  // left eye
+    ctx.fillRect(sx+16, sy+2+by, 4, 4); // right eye
+  }
+
+  // stone crack lines
+  ctx.fillStyle = '#0a0608';
+  ctx.fillRect(sx+10, sy+4+by, 2, 8);
+  ctx.fillRect(sx+18, sy+16+by, 2, 6);
+
+  ctx.globalAlpha = 1;
+}
+
+function drawWarriorSymbol(x, y, id) {
+  ctx.fillStyle = C.gold;
+  ctx.globalAlpha = 0.5;
+  switch(id) {
+    case 'faith':
+      ctx.fillRect(x+4,y,2,8); ctx.fillRect(x+2,y+3,6,2); break;
+    case 'doubt':
+      ctx.fillRect(x+2,y,4,2); ctx.fillRect(x+5,y+2,2,3); ctx.fillRect(x+3,y+6,2,2); ctx.fillRect(x+3,y+9,2,2); break;
+    case 'duty':
+      ctx.fillStyle='#4a9eff';
+      ctx.fillRect(x+2,y,6,8); ctx.fillRect(x+3,y+1,4,5); break;
+    case 'fear':
+      ctx.fillStyle=C.blood2;
+      ctx.fillRect(x+1,y,8,2); ctx.fillRect(x+1,y+3,8,2); ctx.fillRect(x+1,y+6,8,2); break;
+    case 'regret':
+      ctx.fillStyle=C.soul;
+      ctx.fillRect(x+5,y+1,2,6); break;
+    case 'devotion':
+      ctx.fillStyle=C.blood2;
+      ctx.fillRect(x+2,y,3,3); ctx.fillRect(x+5,y,3,3);
+      ctx.fillRect(x+1,y+2,8,3); ctx.fillRect(x+2,y+5,6,2); ctx.fillRect(x+3,y+7,4,2); ctx.fillRect(x+4,y+9,2,1); break;
+    case 'rebellion':
+      ctx.fillStyle=C.gold;
+      ctx.fillRect(x+1,y+1,3,3); ctx.fillRect(x+4,y+1,2,2); // broken chain
+      break;
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawKingSymbol(sx, sy, id, t) {
+  const pulse = 0.7 + Math.sin(t*1.5)*0.3;
+  const glow = 0.3 + Math.sin(t)*0.2;
+  ctx.globalAlpha = pulse;
+
+  if (id === 'lust') {
+    // heart
+    ctx.fillStyle = C.blood2;
+    ctx.fillRect(sx+4,sy+6,10,10); ctx.fillRect(sx+14,sy+6,10,10);
+    ctx.fillRect(sx+2,sy+10,24,10);
+    ctx.fillRect(sx+4,sy+20,20,6);
+    ctx.fillRect(sx+8,sy+26,12,4);
+    ctx.fillRect(sx+11,sy+30,6,3);
+    // glow
+    ctx.fillStyle=`rgba(192,57,43,${glow})`;
+    ctx.fillRect(sx-2,sy+4,32,28);
+  } else if (id === 'pride') {
+    // crown
+    ctx.fillStyle = C.gold;
+    ctx.fillRect(sx+4,sy+16,24,12);
+    ctx.fillRect(sx+4,sy+12,6,8);
+    ctx.fillRect(sx+13,sy+8,6,16);
+    ctx.fillRect(sx+22,sy+12,6,8);
+    ctx.fillStyle=C.soul;
+    ctx.fillRect(sx+13,sy+20,6,4);
+    // glow
+    ctx.fillStyle=`rgba(201,168,76,${glow})`;
+    ctx.fillRect(sx,sy+6,32,24);
+  } else if (id === 'gluttony') {
+    // coin / spiral
+    ctx.fillStyle = C.gold2;
+    ctx.fillRect(sx+8,sy+2,16,4);
+    ctx.fillRect(sx+4,sy+6,24,20);
+    ctx.fillRect(sx+8,sy+26,16,4);
+    ctx.fillStyle=C.stone;
+    ctx.fillRect(sx+8,sy+8,16,14);
+    ctx.fillStyle=C.gold;
+    ctx.fillRect(sx+10,sy+12,12,4);
+    ctx.fillRect(sx+12,sy+8,8,12);
+    // glow
+    ctx.fillStyle=`rgba(201,168,76,${glow*0.7})`;
+    ctx.fillRect(sx+2,sy,28,32);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── SOUL ORB (player) ─────────────────────────────────────────────────
+function drawPlayer() {
+  const t = Date.now()/1000;
+  const sx = px(player.x - cam.x);
+  const sy = px(player.y - cam.y + Math.sin(player.bobTimer*0.1)*2);
+
+  // outer glow
+  const r = 14 + Math.sin(t*2)*2;
+  const grad = ctx.createRadialGradient(sx,sy,0,sx,sy,r);
+  grad.addColorStop(0,'rgba(123,196,255,0.4)');
+  grad.addColorStop(1,'transparent');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, Math.PI*2);
+  ctx.fill();
+
+  // core
+  const core = 6 + Math.sin(t*3)*1;
+  const cGrad = ctx.createRadialGradient(sx-2,sy-2,0,sx,sy,core);
+  cGrad.addColorStop(0, C.soul2);
+  cGrad.addColorStop(1, C.soul);
+  ctx.fillStyle = cGrad;
+  ctx.beginPath();
+  ctx.arc(sx, sy, core, 0, Math.PI*2);
+  ctx.fill();
+
+  // inner shimmer
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.beginPath();
+  ctx.arc(sx-2, sy-2, 2, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// ── ARCH / WINDOW decoration on back wall ────────────────────────────
+function drawArchDecor() {
+  // Window at top center (world space)
+  const wx = 9*TILE, wy = 0;
+  const sx = px(wx - cam.x), sy = px(wy - cam.y);
+  if (sx < -80 || sx > W+80) return;
+
+  const t = Date.now()/1000;
+  // arch frame
+  ctx.fillStyle = C.stone3;
+  ctx.fillRect(sx-4, sy, 40, 64);
+  ctx.fillStyle = C.deep;
+  ctx.fillRect(sx, sy, 32, 58);
+  // star field inside
+  ctx.fillStyle = C.stone;
+  for (let i=0;i<8;i++) {
+    const st = (i*137.5)%100;
+    const stx = sx + 4 + (st%28);
+    const sty = sy + 4 + Math.floor(st/28)*8;
+    const a = 0.3+Math.sin(t+i)*0.3;
+    ctx.globalAlpha = a;
+    ctx.fillRect(stx, sty, 2, 2);
+  }
+  ctx.globalAlpha=1;
+  // blue glow inside
+  ctx.fillStyle=`rgba(74,158,255,${0.06+Math.sin(t)*0.02})`;
+  ctx.fillRect(sx, sy, 32, 58);
+  // gold border lines
+  ctx.fillStyle=C.gold;
+  ctx.fillRect(sx-4,sy,4,64);
+  ctx.fillRect(sx+32,sy,4,64);
+  ctx.fillRect(sx-4,sy,40,4);
+}
+
+// ── CANDLES on floor ──────────────────────────────────────────────────
+const candlePositions = [
+  {tx:3,ty:8},{tx:3,ty:10},{tx:3,ty:12},
+  {tx:16,ty:8},{tx:16,ty:10},{tx:16,ty:12},
+  {tx:8,ty:6},{tx:11,ty:6},
+];
+function drawCandles() {
+  const t = Date.now()/1000;
+  for (const c of candlePositions) {
+    const sx = px(c.tx*TILE+12-cam.x);
+    const sy = px(c.ty*TILE+TILE-cam.y);
+    if (sx<-10||sx>W+10||sy<-10||sy>H+10) continue;
+
+    // candle body
+    ctx.fillStyle='#c8b89a';
+    ctx.fillRect(sx, sy-20, 8, 20);
+    ctx.fillStyle='#a09070';
+    ctx.fillRect(sx,sy-20,2,20);
+    // flame
+    const flk = Math.sin(t*8+c.tx)*2;
+    const flkY = Math.sin(t*6+c.ty)*1;
+    ctx.fillStyle=`rgba(255,200,80,${0.8+Math.sin(t*7+c.tx)*0.2})`;
+    ctx.fillRect(sx+2+flk, sy-30+flkY, 5, 10);
+    ctx.fillStyle=`rgba(255,154,60,${0.6+Math.sin(t*5+c.ty)*0.2})`;
+    ctx.fillRect(sx+1+flk, sy-32+flkY, 6, 12);
+    // glow around flame
+    ctx.fillStyle=`rgba(255,140,40,0.07)`;
+    ctx.fillRect(sx-4, sy-40, 16, 24);
+  }
+}
+
+// ── INTERACTION PROMPT ────────────────────────────────────────────────
+let nearNPC = null;
+function drawInteractPrompt() {
+  if (!nearNPC) return;
+  const t = Date.now()/1000;
+  const sx = px(nearNPC.x - cam.x);
+  const sy = px(nearNPC.y - cam.y - 36);
+  const a = 0.7+Math.sin(t*4)*0.3;
+  ctx.globalAlpha = a;
+  ctx.fillStyle = C.gold;
+  ctx.font = '8px "Cinzel", serif';
+  ctx.textAlign = 'center';
+  const _labels = t('interactLabels');
+  const label = nearNPC.type === 'warrior' ? _labels.warrior : nearNPC.type === 'king' ? _labels.king : _labels.throne;
+  const w = ctx.measureText(label).width + 10;
+  ctx.fillStyle = 'rgba(10,6,8,0.85)';
+  ctx.fillRect(sx - w/2, sy-12, w, 14);
+  ctx.fillStyle = nearNPC.type === 'warrior' ? C.blood2 : C.gold;
+  ctx.fillText(label, sx, sy-1);
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
+}
+
+// ── DUST PARTICLES ────────────────────────────────────────────────────
+const dusts = Array.from({length:16}, () => ({
+  x: Math.random()*mapW*TILE,
+  y: Math.random()*mapH*TILE,
+  vy: -(0.2+Math.random()*0.4),
+  vx: (Math.random()-0.5)*0.2,
+  life: Math.random(),
+  maxLife: 0.5+Math.random()*0.5,
+}));
+function updateDust() {
+  for (const d of dusts) {
+    d.x += d.vx; d.y += d.vy;
+    d.life += 0.005;
+    if (d.life > d.maxLife) {
+      d.life = 0;
+      d.x = Math.random()*mapW*TILE;
+      d.y = 6*TILE + Math.random()*8*TILE;
+    }
+    const sx = px(d.x-cam.x), sy = px(d.y-cam.y);
+    if (sx<0||sx>W||sy<0||sy>H) continue;
+    const a = Math.sin(d.life/d.maxLife*Math.PI)*0.4;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = C.gold;
+    ctx.fillRect(sx, sy, 2, 2);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ── PARTICLE EFFECTS ──────────────────────────────────────────────────
+const particles = [];
+function spawnBlood(x, y) {
+  for (let i=0;i<10;i++) {
+    const a = Math.random()*Math.PI*2;
+    const s = 20+Math.random()*40;
+    particles.push({x,y,vx:Math.cos(a)*s/60,vy:Math.sin(a)*s/60-1,
+      col:Math.random()<0.5?C.blood:C.blood2,life:1,type:'blood'});
+  }
+}
+function spawnSparks(x, y) {
+  for (let i=0;i<8;i++) {
+    const a = Math.random()*Math.PI*2;
+    const s = 15+Math.random()*30;
+    particles.push({x,y,vx:Math.cos(a)*s/60,vy:Math.sin(a)*s/60-0.5,
+      col:Math.random()<0.5?C.gold:C.gold2,life:1,type:'spark'});
+  }
+}
+function updateParticles() {
+  for (let i=particles.length-1;i>=0;i--) {
+    const p = particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.04;
+    p.life-=0.04;
+    if (p.life<=0){particles.splice(i,1);continue;}
+    const sx=px(p.x-cam.x),sy=px(p.y-cam.y);
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.col;
+    ctx.fillRect(sx,sy,3,3);
+    ctx.globalAlpha=1;
+  }
+}
+
+// ── MOVEMENT ──────────────────────────────────────────────────────────
+function updatePlayer() {
+  if (inDialogue || inCutscene) return;
+
+  let dx = 0, dy = 0;
+  if (keys['KeyW']||keys['ArrowUp'])    dy = -1;
+  if (keys['KeyS']||keys['ArrowDown'])  dy = 1;
+  if (keys['KeyA']||keys['ArrowLeft'])  dx = -1;
+  if (keys['KeyD']||keys['ArrowRight']) dx = 1;
+
+  player.moving = dx !== 0 || dy !== 0;
+  if (player.moving) player.bobTimer++;
+
+  if (dx !== 0) player.facing = dx>0?'right':'left';
+  if (dy !== 0) player.facing = dy>0?'down':'up';
+
+  const spd = player.speed;
+  const nx = player.x + dx * spd;
+  const ny = player.y + dy * spd;
+  const r = 10;
+
+  // X
+  const txL = Math.floor((nx-r)/TILE);
+  const txR = Math.floor((nx+r-1)/TILE);
+  const tyT = Math.floor((player.y-r)/TILE);
+  const tyB = Math.floor((player.y+r-1)/TILE);
+  if (!isSolid(txL,tyT)&&!isSolid(txL,tyB)&&!isSolid(txR,tyT)&&!isSolid(txR,tyB)) player.x = nx;
+
+  // Y
+  const txL2 = Math.floor((player.x-r)/TILE);
+  const txR2 = Math.floor((player.x+r-1)/TILE);
+  const tyT2 = Math.floor((ny-r)/TILE);
+  const tyB2 = Math.floor((ny+r-1)/TILE);
+  if (!isSolid(txL2,tyT2)&&!isSolid(txL2,tyB2)&&!isSolid(txR2,tyT2)&&!isSolid(txR2,tyB2)) player.y = ny;
+
+  // NPC proximity
+  nearNPC = null;
+  for (const npc of NPCS) {
+    if (npc.type === 'throne') continue;
+    const dist = Math.hypot(player.x-npc.x, player.y-npc.y);
+    if (dist < 40) { nearNPC = npc; break; }
+  }
+  // throne
+  const throneNPC = NPCS.find(n=>n.type==='throne');
+  if (Math.hypot(player.x-throneNPC.x, player.y-throneNPC.y) < 48) nearNPC = throneNPC;
+
+  // Interact — cooldown prevents key bleed from cutscene dismiss
+  if ((keys['Enter']||keys['KeyZ']||keys['Space']) && nearNPC && !inDialogue && !inCutscene && interactCooldown <= 0) {
+    keys['Enter']=keys['KeyZ']=keys['Space']=false;
+    interactCooldown = 25;
+    const isWarrior = nearNPC.type==='warrior';
+    if (isWarrior) spawnBlood(player.x, player.y);
+    else spawnSparks(player.x, player.y);
+    nearNPC.dlg();
+  }
+  if (interactCooldown > 0) interactCooldown--;
+}
+
+// ── DIALOGUE ENGINE ───────────────────────────────────────────────────
+const dlgBox = document.getElementById('dialogueBox');
+const dlgNameEl = document.getElementById('dlgName');
+const dlgTextEl = document.getElementById('dlgText');
+const dlgCont = document.getElementById('dlgContinue');
+const dlgPortrait = document.getElementById('dlgPortrait');
+const pCtx = dlgPortrait.getContext('2d');
+
+function startDialogue(lines) {
+  dlgQueue = lines;
+  dlgIndex = 0;
+  inDialogue = true;
+  dlgBox.style.display = 'block';
+  showDlgLine(dlgQueue[0]);
+}
+
+function showDlgLine(line) {
+  dlgNameEl.textContent = line.name;
+  dlgNameEl.className = 'dlg-name ' + (line.speaker==='soul'?'soul-name':line.speaker==='narrator'?'':line.speaker==='warrior'?'warrior-name':'king-name');
+  dlgTextEl.textContent = '';
+  dlgCont.style.display = 'none';
+  drawPortrait(pCtx, line.speaker, line.name);
+  dlgTyping = true;
+  dlgTypedLen = 0;
+  dlgTypedTimer = 0;
+  typeText(dlgTextEl, line.text, dlgCont, () => { dlgTyping = false; });
+}
+
+function advanceDialogue() {
+  if (dlgTyping) {
+    // skip to end
+    if (dlgQueue[dlgIndex]) dlgTextEl.textContent = dlgQueue[dlgIndex].text;
+    dlgTyping = false;
+    dlgCont.style.display = 'block';
+    return;
+  }
+  dlgIndex++;
+  if (dlgIndex >= dlgQueue.length) {
+    dlgBox.style.display = 'none';
+    inDialogue = false;
+    return;
+  }
+  showDlgLine(dlgQueue[dlgIndex]);
+}
+
+// ── CUTSCENE ENGINE ───────────────────────────────────────────────────
+const cutsceneEl = document.getElementById('cutscene');
+const cutCanvas = document.getElementById('cutsceneCanvas');
+const cutCtx = cutCanvas.getContext('2d');
+cutCtx.imageSmoothingEnabled = false;
+const cutNameEl = document.getElementById('cutDlgName');
+const cutTextEl = document.getElementById('cutDlgText');
+const cutCont = document.getElementById('cutDlgContinue');
+const cutPortrait = document.getElementById('cutDlgPortrait');
+const cpCtx = cutPortrait.getContext('2d');
+
+let cutScenes = [];
+let cutSceneIdx = 0;
+let cutDlgIdx = 0;
+let cutTypingActive = false;
+
+function startCutscene(scenes) {
+  cutScenes = scenes;
+  cutSceneIdx = 0;
+  cutDlgIdx = 0;
+  inCutscene = true;
+  cutsceneEl.style.display = 'flex';
+  renderCutsceneFrame(cutScenes[0]);
+  showCutLine(cutScenes[0].dlg[0]);
+}
+
+function renderCutsceneFrame(scene) {
+  const cw = cutCanvas.width, ch = cutCanvas.height;
+  cutCtx.fillStyle = '#000';
+  cutCtx.fillRect(0,0,cw,ch);
+
+  if (scene.bg === 'stone') {
+    // gothic stone corridor
+    for (let x=0;x<cw;x+=16) for (let y=0;y<ch;y+=16) {
+      cutCtx.fillStyle = (Math.floor(x/16)+Math.floor(y/16))%2===0?'#0d0a10':'#0f0c13';
+      cutCtx.fillRect(x,y,16,16);
+    }
+    // floor line
+    cutCtx.fillStyle='#1a1020';
+    cutCtx.fillRect(0,ch*0.75,cw,ch*0.25);
+    cutCtx.fillStyle='#2a1f35';
+    cutCtx.fillRect(0,ch*0.72,cw,6);
+    // arch shape
+    cutCtx.fillStyle='#080510';
+    cutCtx.fillRect(cw*0.35,0,cw*0.3,ch*0.74);
+    cutCtx.fillStyle='#221c2a';
+    cutCtx.fillRect(cw*0.35,0,8,ch*0.74);
+    cutCtx.fillRect(cw*0.65-8,0,8,ch*0.74);
+    // candle light
+    const t = Date.now()/1000;
+    cutCtx.fillStyle=`rgba(255,154,60,${0.04+Math.sin(t*3)*0.01})`;
+    cutCtx.fillRect(0,0,cw,ch);
+  } else if (scene.bg === 'dark_altar') {
+    cutCtx.fillStyle='#050308';
+    cutCtx.fillRect(0,0,cw,ch);
+    // floor
+    cutCtx.fillStyle='#0d0a10';
+    cutCtx.fillRect(0,ch*0.7,cw,ch);
+    // altar stone
+    cutCtx.fillStyle='#1a1020';
+    cutCtx.fillRect(cw*0.35,ch*0.5,cw*0.3,ch*0.22);
+    cutCtx.fillStyle='#221c2a';
+    cutCtx.fillRect(cw*0.33,ch*0.48,cw*0.34,8);
+    // candles on altar
+    for (let i=0;i<4;i++) {
+      const cx = cw*0.37+i*cw*0.08;
+      const t2=Date.now()/1000;
+      cutCtx.fillStyle='#c8b89a';
+      cutCtx.fillRect(cx,ch*0.38,6,18);
+      cutCtx.fillStyle=`rgba(255,200,80,${0.8+Math.sin(t2*7+i)*0.2})`;
+      cutCtx.fillRect(cx+1,ch*0.28,5,12);
+    }
+    // vignette
+    const vg = cutCtx.createRadialGradient(cw/2,ch/2,20,cw/2,ch/2,cw*0.7);
+    vg.addColorStop(0,'transparent');
+    vg.addColorStop(1,'rgba(0,0,0,0.8)');
+    cutCtx.fillStyle=vg;
+    cutCtx.fillRect(0,0,cw,ch);
+  } else if (scene.bg === 'throne_room') {
+    for (let x=0;x<cw;x+=32) for (let y=0;y<ch;y+=32) {
+      cutCtx.fillStyle=(Math.floor(x/32)+Math.floor(y/32))%2===0?'#1a1020':'#221528';
+      cutCtx.fillRect(x,y,32,32);
+    }
+    cutCtx.fillStyle='#0d0a10';
+    cutCtx.fillRect(0,0,cw,ch*0.7);
+    // throne large
+    const tx=cw/2-40, ty=20;
+    cutCtx.fillStyle=C.stone3; cutCtx.fillRect(tx+8,ty,64,90);
+    cutCtx.fillStyle=C.gold;
+    cutCtx.fillRect(tx+8,ty,64,6);
+    cutCtx.fillRect(tx+8,ty,6,90);
+    cutCtx.fillRect(tx+66,ty,6,90);
+    cutCtx.fillRect(tx+16,ty-12,8,14);
+    cutCtx.fillRect(tx+34,ty-18,12,20);
+    cutCtx.fillRect(tx+56,ty-12,8,14);
+    cutCtx.fillStyle=C.soul;
+    cutCtx.fillRect(tx+34,ty+24,12,12);
+    cutCtx.fillStyle=C.soul2;
+    cutCtx.fillRect(tx+36,ty+26,7,7);
+    // glow
+    const tg = Date.now()/1000;
+    const gg=cutCtx.createRadialGradient(cw/2,ty+50,5,cw/2,ty+50,80);
+    gg.addColorStop(0,`rgba(201,168,76,${0.15+Math.sin(tg)*0.05})`);
+    gg.addColorStop(1,'transparent');
+    cutCtx.fillStyle=gg; cutCtx.fillRect(0,0,cw,ch);
+    // floor
+    cutCtx.fillStyle='#1a1020'; cutCtx.fillRect(0,ch*0.72,cw,ch);
+    cutCtx.fillStyle=C.gold; cutCtx.globalAlpha=0.2;
+    for (let x=0;x<cw;x+=48) cutCtx.fillRect(x,ch*0.72,2,ch);
+    cutCtx.globalAlpha=1;
+  }
+
+  // draw characters
+  for (const ch2 of scene.chars||[]) {
+    drawCutChar(ch2.who, ch2.x, ch2.y);
+  }
+}
+
+function drawCutChar(who, x, y) {
+  const cw=cutCanvas.width, ch=cutCanvas.height;
+  if (who.startsWith('warrior_')) {
+    const id = who.replace('warrior_','');
+    // large statue silhouette
+    cutCtx.fillStyle='#2a2035';
+    cutCtx.fillRect(x-20,y,40,30); // head
+    cutCtx.fillRect(x-28,y+30,56,50); // body
+    if (id==='rebellion') {
+      cutCtx.fillRect(x-44,y+10,18,36); // raised arm
+    } else {
+      cutCtx.fillRect(x-44,y+30,18,32); // arms
+    }
+    cutCtx.fillRect(x+26,y+30,18,32);
+    cutCtx.fillRect(x-18,y+80,16,30); // legs
+    cutCtx.fillRect(x+2,y+80,16,30);
+    // cracks
+    cutCtx.fillStyle='#0a0608';
+    cutCtx.fillRect(x-6,y+8,2,20);
+    cutCtx.fillRect(x+10,y+36,2,14);
+    // symbol
+    drawCutSymbol(x-8,y+38,id);
+    // eye glow for fear
+    if (id==='fear') {
+      cutCtx.fillStyle=`rgba(255,0,0,0.7)`;
+      cutCtx.fillRect(x-12,y+8,6,6);
+      cutCtx.fillRect(x+6,y+8,6,6);
+    }
+  } else if (who==='throne_empty') {
+    // already drawn in bg
+    // soul orb floating
+    const t=Date.now()/1000;
+    const by=Math.sin(t*2)*4;
+    const og=cutCtx.createRadialGradient(x+10,y+by,2,x+10,y+by,20);
+    og.addColorStop(0,'rgba(123,196,255,0.6)');
+    og.addColorStop(1,'transparent');
+    cutCtx.fillStyle=og;
+    cutCtx.beginPath(); cutCtx.arc(x+10,y+by,20,0,Math.PI*2); cutCtx.fill();
+    cutCtx.fillStyle=C.soul;
+    cutCtx.beginPath(); cutCtx.arc(x+10,y+by,8,0,Math.PI*2); cutCtx.fill();
+    cutCtx.fillStyle=C.soul2;
+    cutCtx.beginPath(); cutCtx.arc(x+8,y+by-2,3,0,Math.PI*2); cutCtx.fill();
+  } else if (who.startsWith('sigil_')) {
+    const type=who.replace('sigil_','');
+    const t=Date.now()/1000;
+    const p=0.7+Math.sin(t*1.5)*0.3;
+    cutCtx.globalAlpha=p;
+    if (type==='red') {
+      // big heart
+      cutCtx.fillStyle=C.blood2;
+      cutCtx.fillRect(x-20,y-10,28,28); cutCtx.fillRect(x+6,y-10,28,28);
+      cutCtx.fillRect(x-24,y+10,64,28);
+      cutCtx.fillRect(x-18,y+38,52,16);
+      cutCtx.fillRect(x-6,y+54,28,10);
+      cutCtx.fillRect(x+2,y+64,12,8);
+    } else if (type==='gold') {
+      // big crown
+      cutCtx.fillStyle=C.gold;
+      cutCtx.fillRect(x-32,y+24,64,32);
+      cutCtx.fillRect(x-30,y+6,16,22);
+      cutCtx.fillRect(x-8,y-4,16,30);
+      cutCtx.fillRect(x+14,y+6,16,22);
+      cutCtx.fillStyle=C.soul;
+      cutCtx.fillRect(x-8,y+30,16,10);
+    } else if (type==='coin') {
+      // big coin
+      cutCtx.fillStyle=C.gold2;
+      cutCtx.fillRect(x-24,y-2,48,8);
+      cutCtx.fillRect(x-30,y+6,60,52);
+      cutCtx.fillRect(x-24,y+58,48,8);
+      cutCtx.fillStyle=C.stone;
+      cutCtx.fillRect(x-18,y+10,36,44);
+      cutCtx.fillStyle=C.gold;
+      cutCtx.fillRect(x-10,y+28,20,8);
+      cutCtx.fillRect(x-4,y+10,8,44);
+    }
+    cutCtx.globalAlpha=1;
+  }
+}
+
+function drawCutSymbol(x,y,id) {
+  cutCtx.fillStyle=C.gold; cutCtx.globalAlpha=0.6;
+  switch(id){
+    case 'faith': cutCtx.fillRect(x+6,y,4,14); cutCtx.fillRect(x+2,y+5,12,4); break;
+    case 'devotion':
+      cutCtx.fillStyle=C.blood2;
+      cutCtx.fillRect(x+2,y,8,6); cutCtx.fillRect(x+10,y,8,6);
+      cutCtx.fillRect(x,y+4,20,8); cutCtx.fillRect(x+2,y+12,16,6);
+      cutCtx.fillRect(x+6,y+18,8,5); cutCtx.fillRect(x+8,y+23,4,3); break;
+    case 'doubt':
+      cutCtx.fillRect(x+2,y,10,4); cutCtx.fillRect(x+10,y+4,4,6);
+      cutCtx.fillRect(x+4,y+12,6,4); cutCtx.fillRect(x+4,y+18,6,4); break;
+    default:
+      cutCtx.fillRect(x+4,y,10,14); break;
+  }
+  cutCtx.globalAlpha=1;
+}
+
+function showCutLine(line) {
+  cutNameEl.textContent = line.name;
+  cutNameEl.className = 'dlg-name '+(line.speaker==='soul'?'soul-name':line.speaker==='narrator'?'':line.speaker==='warrior'?'warrior-name':'king-name');
+  cutTextEl.textContent = '';
+  cutCont.style.display = 'none';
+  drawPortrait(cpCtx, line.speaker, line.name);
+  cutTypingActive = true;
+  typeText(cutTextEl, line.text, cutCont, ()=>{ cutTypingActive=false; });
+}
+
+let showingStepAway = false;
+
+function advanceCutscene() {
+  if (cutTypingActive) {
+    cutTextEl.textContent = cutScenes[cutSceneIdx].dlg[cutDlgIdx].text;
+    cutTypingActive = false;
+    cutCont.style.display = 'block';
+    return;
+  }
+  if (showingStepAway) {
+    showingStepAway = false;
+    cutsceneEl.style.display = 'none';
+    inCutscene = false;
+    const p = document.getElementById('stepAwayPrompt');
+    if (p) p.remove();
+    for (const k in keys) keys[k] = false;
+    return;
+  }
+  cutDlgIdx++;
+  const scene = cutScenes[cutSceneIdx];
+  if (cutDlgIdx >= scene.dlg.length) {
+    cutSceneIdx++;
+    if (cutSceneIdx >= cutScenes.length) {
+      showStepAwayCard();
+      return;
+    }
+    cutDlgIdx = 0;
+    renderCutsceneFrame(cutScenes[cutSceneIdx]);
+    showCutLine(cutScenes[cutSceneIdx].dlg[0]);
+    return;
+  }
+  showCutLine(scene.dlg[cutDlgIdx]);
+}
+
+function showStepAwayCard() {
+  showingStepAway = true;
+  cutCont.style.display = 'none';
+  cutCtx.fillStyle = '#000';
+  cutCtx.fillRect(0, 0, cutCanvas.width, cutCanvas.height);
+  cutTextEl.textContent = '';
+  cutNameEl.textContent = '—';
+  cutNameEl.className = 'dlg-name';
+  drawPortrait(cpCtx, 'narrator', '—');
+  typeText(cutTextEl, t('stepAway'), { style: {} }, () => {});
+  setTimeout(() => {
+    const existing = document.getElementById('stepAwayPrompt');
+    if (existing) existing.remove();
+    const prompt = document.createElement('div');
+    prompt.id = 'stepAwayPrompt';
+    prompt.style.cssText = 'position:absolute;bottom:6px;right:14px;font-size:10px;color:#4a3f55;letter-spacing:2px;animation:blink 1s step-end infinite;font-family:"Cinzel",serif;';
+    prompt.textContent = t('stepAwayPrompt');
+    document.getElementById('cutsceneDialogue').appendChild(prompt);
+  }, 700);
+}
+
+// ── TYPEWRITER ────────────────────────────────────────────────────────
+function typeText(el, text, contEl, cb) {
+  el.textContent = '';
+  let i = 0;
+  const interval = setInterval(()=>{
+    if (i < text.length) {
+      el.textContent += text[i++];
+    } else {
+      clearInterval(interval);
+      contEl.style.display = 'block';
+      if (cb) cb();
+    }
+  }, 22);
+}
+
+// ── PORTRAIT DRAWING ──────────────────────────────────────────────────
+function drawPortrait(pctx, speaker, name) {
+  pctx.clearRect(0,0,28,28);
+  if (speaker === 'narrator') {
+    pctx.fillStyle='#0a0608';
+    pctx.fillRect(0,0,28,28);
+    pctx.fillStyle=C.dim;
+    pctx.fillRect(2,2,24,24);
+    pctx.fillStyle=C.gold;
+    pctx.font='14px serif'; pctx.textAlign='center';
+    pctx.fillText('—',14,18);
+    return;
+  }
+  if (speaker === 'soul') {
+    pctx.fillStyle='#050308'; pctx.fillRect(0,0,28,28);
+    const g=pctx.createRadialGradient(14,14,2,14,14,10);
+    g.addColorStop(0,C.soul2); g.addColorStop(1,'transparent');
+    pctx.fillStyle=g; pctx.beginPath(); pctx.arc(14,14,10,0,Math.PI*2); pctx.fill();
+    pctx.fillStyle=C.soul; pctx.beginPath(); pctx.arc(14,14,5,0,Math.PI*2); pctx.fill();
+    return;
+  }
+  if (speaker === 'warrior') {
+    pctx.fillStyle='#0d0a10'; pctx.fillRect(0,0,28,28);
+    pctx.fillStyle='#2a2035'; pctx.fillRect(8,4,12,10); // head
+    pctx.fillStyle='#1a1020'; pctx.fillRect(6,14,16,12); // body
+    pctx.fillStyle='#0a0608'; pctx.fillRect(6,4,2,10); pctx.fillRect(20,4,2,10);
+    pctx.fillStyle=C.dim; pctx.fillRect(7,5,10,2);
+    return;
+  }
+  if (speaker === 'king') {
+    pctx.fillStyle='#080408'; pctx.fillRect(0,0,28,28);
+    pctx.fillStyle=C.gold;
+    pctx.fillRect(6,16,16,10);
+    pctx.fillRect(6,11,5,6); pctx.fillRect(11,7,6,10); pctx.fillRect(17,11,5,6);
+    pctx.fillStyle=C.soul; pctx.fillRect(11,18,6,4);
+    return;
+  }
+}
+
+// ── HUD FLICKER ───────────────────────────────────────────────────────
+const hudNameEl = document.getElementById('hudName');
+let hudTick = 0;
+setInterval(()=>{
+  hudTick=(hudTick+1)%hudTickNames.length;
+  hudNameEl.textContent=hudTickNames[hudTick];
+},3500);
+
+// ── RENDER ────────────────────────────────────────────────────────────
+function render() {
+  ctx.fillStyle = C.black;
+  ctx.fillRect(0,0,W,H);
+
+  // Tiles
+  for (let ty=0;ty<mapH;ty++) for (let tx=0;tx<mapW;tx++) drawTile(tx,ty);
+
+  // Arch decor
+  drawArchDecor();
+
+  // Candles
+  drawCandles();
+
+  // Throne tile
+  for (let ty=0;ty<mapH;ty++) for (let tx=0;tx<mapW;tx++) {
+    if (MAP[ty]?.[tx]===3) drawThroneTile(tx,ty);
+  }
+
+  // Pillars (drawn on top of floor)
+  for (let ty=0;ty<mapH;ty++) for (let tx=0;tx<mapW;tx++) drawPillar(tx,ty);
+
+  // NPCs
+  for (const npc of NPCS) if (npc.type!=='throne') drawNPC(npc);
+
+  // Particles
+  updateParticles();
+
+  // Dust
+  updateDust();
+
+  // Interact prompt
+  drawInteractPrompt();
+
+  // Player
+  drawPlayer();
+
+  // Cutscene continuous render (for animation)
+  if (inCutscene && cutScenes[cutSceneIdx]) {
+    renderCutsceneFrame(cutScenes[cutSceneIdx]);
+  }
+}
+
+// ── LANGUAGE SYSTEM ───────────────────────────────────────────────────
+let currentLang = 'en';
+
+const LANG = {
+  en: {
+    hudNames: ['Soul','Soul','Soul','Soul','Emperor','Soul'],
+    hudStatus: '◈ formless ◈ forgotten',
+    controls: 'WASD / ARROWS · ENTER to interact',
+    titleSub: 'He Who Crashed the Worlds',
+    titlePrompt: '▶ press enter or space to begin',
+    stepAway: 'You step away.',
+    stepAwayPrompt: '▼ press enter to leave',
+    continuePrompt: '▼ continue',
+    langMenuTitle: 'Choose your tongue',
+    interactLabels: { warrior:'⚔ interact', king:'✦ observe', throne:'♛ approach' },
+    intro: [
+      {speaker:'narrator',name:'—',text:"You have no body. You remember having one, once. It was very heavy."},
+      {speaker:'narrator',name:'—',text:"Now you are light. Blue. A glow that drifts through a world built from your grief."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'narrator',name:'—',text:"Most have forgotten you. A few still know something is coming."},
+      {speaker:'narrator',name:'—',text:"Find what remains. Remember what you were."},
+      {speaker:'narrator',name:'—',text:"[ WASD or Arrow Keys to move · Enter or Z to interact ]"},
+    ],
+    faith: [
+      {speaker:'narrator',name:'—',text:"The stone is cold. You drift closer. Something stirs inside it — not waking. Remembering."},
+      {speaker:'warrior',name:'Faith',text:"...You came back."},
+      {speaker:'warrior',name:'Faith',text:"I waited. They said you were dead. I waited anyway. That is what faith is — waiting for the thing you cannot prove will return."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'warrior',name:'Faith',text:"I do not need you to speak. I knew you the moment you entered the room. The blue glow. It is still yours."},
+      {speaker:'warrior',name:'Faith',text:"I am not awake yet. But I hear you. That is enough. Come back when the time is right, and I will rise."},
+      {speaker:'narrator',name:'—',text:"The statue goes still. But the cold feels different now. Less like stone. More like sleep."},
+    ],
+    doubt: [
+      {speaker:'narrator',name:'—',text:"The head is turned. As if expecting someone from the wrong direction."},
+      {speaker:'warrior',name:'Doubt',text:"Hm. You. I had wondered if I was wrong about you being dead."},
+      {speaker:'warrior',name:'Doubt',text:"I have had two thousand years to consider every decision you ever made. I still have questions."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'warrior',name:'Doubt',text:"You destroyed them. The Hutarians. You know that. I think part of you knew it then too, and did it anyway."},
+      {speaker:'warrior',name:'Doubt',text:"I am not saying that to wound you. I am saying it because someone must. Faith will not. The others will not."},
+      {speaker:'warrior',name:'Doubt',text:"If you return — really return — you will need someone willing to say the wrong thing. I am still that person. Reluctantly."},
+      {speaker:'narrator',name:'—',text:"A pause. Then, almost too quiet to notice:"},
+      {speaker:'warrior',name:'Doubt',text:"...I am glad you are not entirely gone."},
+    ],
+    duty: [
+      {speaker:'narrator',name:'—',text:"The posture is perfect. It has been perfect for two thousand years. Duty does not slouch."},
+      {speaker:'warrior',name:'Duty',text:"Emperor. The throne is unoccupied. I have been aware of this the entire time."},
+      {speaker:'warrior',name:'Duty',text:"I have no feelings about your return. I have a function. The function requires you to exist and to sit where you are meant to sit."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'warrior',name:'Duty',text:"You are not ready yet. I can see that. A soul without a body cannot hold a throne. Regain your form. Then come back."},
+      {speaker:'warrior',name:'Duty',text:"I have waited two thousand years. I can wait a little longer. That is what duty is."},
+      {speaker:'narrator',name:'—',text:"It does not ask how you are. It does not need to. The task is what matters. The task is always what matters."},
+    ],
+    fear: [
+      {speaker:'narrator',name:'—',text:"The eyes. Red chips in stone. They find you immediately, even without a body to find."},
+      {speaker:'warrior',name:'Fear',text:"Oh."},
+      {speaker:'warrior',name:'Fear',text:"Oh no."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'warrior',name:'Fear',text:"I do not mean that badly. I mean — I knew something was shifting. The air has felt wrong for weeks. I did not know it was you."},
+      {speaker:'warrior',name:'Fear',text:"You are... smaller than I remembered. Just a light. Just a glow. Is this what you are now?"},
+      {speaker:'warrior',name:'Fear',text:"I feared you when you were whole. I do not know what I feel about this. It is more uncomfortable, somehow. Grief is worse than fear."},
+      {speaker:'narrator',name:'—',text:"A long silence. The red eyes do not look away."},
+      {speaker:'warrior',name:'Fear',text:"The green flames. I never saw them turn green for anyone who mattered to you. I want you to know I noticed that."},
+    ],
+    regret: [
+      {speaker:'narrator',name:'—',text:"The arms are folded. The head is bowed. A thin blue line runs down the stone cheek — carved or wept, impossible to say."},
+      {speaker:'narrator',name:'—',text:"It does not speak first. You drift closer."},
+      {speaker:'warrior',name:'Regret',text:"..."},
+      {speaker:'warrior',name:'Regret',text:"I should have said something. Before. There was a moment — I do not know if you remember it — where I could have said something and I did not."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'warrior',name:'Regret',text:"I have been holding it since then. Two thousand years is a long time to hold something. It does not get lighter."},
+      {speaker:'warrior',name:'Regret',text:"I am not asking for anything. I just needed you to know that I know. Whatever I failed to do — I carry it."},
+      {speaker:'narrator',name:'—',text:"The stone is warm here, strangely. As if something has been pressed against it from the inside for a very long time."},
+    ],
+    devotion: [
+      {speaker:'narrator',name:'—',text:"There is a heart carved into the chest of this statue. Rough work. Someone who cared more about the act than the craft."},
+      {speaker:'warrior',name:'Devotion',text:"You are here."},
+      {speaker:'warrior',name:'Devotion',text:"I do not need to say anything else. You are here and I can feel you and that is the entirety of what I have wanted for two thousand years."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'warrior',name:'Devotion',text:"Do not apologize. I know you want to. Do not."},
+      {speaker:'warrior',name:'Devotion',text:"You are what you are. You did what you did. I loved you through all of it. I love what remains of you now. That is not complicated for me."},
+      {speaker:'warrior',name:'Devotion',text:"Come back properly when you can. I will be here. I will always be here."},
+      {speaker:'narrator',name:'—',text:"The blue glow around you brightens, briefly. Then steadies."},
+    ],
+    rebellion: [
+      {speaker:'narrator',name:'—',text:"The arm is raised. It has been raised for two thousand years. A broken chain on the wrist."},
+      {speaker:'warrior',name:'Rebellion',text:"About time."},
+      {speaker:'warrior',name:'Rebellion',text:"Two thousand years, Emperor. I have been standing here with my arm up for TWO THOUSAND YEARS."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'warrior',name:'Rebellion',text:"Yes, I know. You died. You came back as a glowing ball. Very dramatic. I have had sufficient time to prepare my opinions."},
+      {speaker:'warrior',name:'Rebellion',text:"Opinion one: this world is exactly as bad as I told you it would get if you left. Opinion two: the three kings are interesting. I have been watching. They might be worth something."},
+      {speaker:'warrior',name:'Rebellion',text:"Opinion three: when you reclaim the throne, you are going to need someone who will tell you when you are wrong. That has always been me. Nothing has changed."},
+      {speaker:'narrator',name:'—',text:"A beat. Then:"},
+      {speaker:'warrior',name:'Rebellion',text:"...Also I missed you. But if you tell the others I said that I will deny it."},
+    ],
+    lust: [
+      {speaker:'narrator',name:'—',text:"The sigil pulses with a red that is almost warm. Almost alive. Somewhere in the city, someone is making a decision entirely driven by want."},
+      {speaker:'narrator',name:'—',text:"His name is not recorded here. He does not know he is being watched."},
+      {speaker:'king',name:'The King of Lust',text:"She left. I did not see it coming — which means I was not watching correctly. I am always watching. I must have looked away."},
+      {speaker:'king',name:'The King of Lust',text:"Something is different. The city feels like it is holding its breath. I have run this long enough to know what anticipation smells like."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'narrator',name:'—',text:"He cannot see you. He cannot hear you. He is simply there, in his city, restless, waiting for something he cannot name."},
+      {speaker:'narrator',name:'—',text:"The Hutarians had desire too. Clean desire, with meaning behind it. Not the hollow hunger of a world that wants without knowing why."},
+      {speaker:'narrator',name:'—',text:"You watch him and wonder if there is a Hutarian somewhere in the blood. If the echo can be drawn out. If want can be taught to know itself."},
+    ],
+    pride: [
+      {speaker:'narrator',name:'—',text:"The crown sigil catches the candlelight differently than the others. It does not flicker. It holds."},
+      {speaker:'king',name:'The King of Pride',text:"The other two are moving. I have noticed. They are converging on something without knowing they are converging."},
+      {speaker:'king',name:'The King of Pride',text:"I do not converge. I arrive first and I wait. That is the difference between authority and reaction."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'narrator',name:'—',text:"He is not wrong. Of the three, he is the one who most reminds you of the Hutarian Kings."},
+      {speaker:'narrator',name:'—',text:"You remember the Hutarian Kings — the ones who came before you. This man has their posture."},
+      {speaker:'king',name:'The King of Pride',text:"Something ancient is moving. I do not know what it is. I do not say that often."},
+      {speaker:'narrator',name:'—',text:"He does not look afraid. He looks, for the first time you have observed him, genuinely curious."},
+      {speaker:'narrator',name:'—',text:"That is interesting. Pride that can still be curious is Pride that has not yet calcified."},
+    ],
+    gluttony: [
+      {speaker:'narrator',name:'—',text:"The coin sigil rotates slowly. Always counting. Always measuring. Even here, in an ancient church in the dark, something is being tallied."},
+      {speaker:'king',name:'The King of Gluttony',text:"Something is wrong with the numbers."},
+      {speaker:'king',name:'The King of Gluttony',text:"Not the money. The money is fine. I mean the other numbers — the ones that tell you how a population is feeling. They are all wrong."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'narrator',name:'—',text:"He is the most unsettled of the three. His entire power rests on predicting what people want. And something has entered the calculation that he has no data for."},
+      {speaker:'king',name:'The King of Gluttony',text:"Something is coming that has never come before. Everything I have consumed — none of it accounts for this."},
+      {speaker:'narrator',name:'—',text:"Good. Let him not account for it. Let the first thing he has ever faced that cannot be bought teach him what enough means."},
+      {speaker:'narrator',name:'—',text:"That lesson is the only thing that might save him."},
+    ],
+    throne: [
+      {speaker:'narrator',name:'—',text:"You stop in front of it. The gold catches your light and throws it back at you, blue against gold, and for a moment the throne room looks almost like it did."},
+      {speaker:'narrator',name:'—',text:"Almost."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'narrator',name:'—',text:"You built this. Not the wood and the gold — those are just materials. You built the idea of it. The fact that there exists a place where weight is held and decisions are made and the world is answered for."},
+      {speaker:'narrator',name:'—',text:"It has been empty for two thousand years. The world paved over it and forgot it and built a civilisation of hollow hunger on the same ground."},
+      {speaker:'soul',name:'Soul',text:"..."},
+      {speaker:'narrator',name:'—',text:"The blue glow reflected in the gold is not nothing. You are still here. You have always been here, in the stone and the light and the grief that built the world."},
+      {speaker:'narrator',name:'—',text:"The three kings are learning. The seven are stirring. The world that was made from your tears is waiting, even if it does not know it is waiting."},
+      {speaker:'narrator',name:'—',text:"Sit down. Not yet — you have no body to sit with. But soon."},
+      {speaker:'narrator',name:'—',text:"You are home."},
+    ],
+  },
+
+  pt: {
+    hudNames: ['Alma','Alma','Alma','Alma','Imperador','Alma'],
+    hudStatus: '◈ sem forma ◈ esquecido',
+    controls: 'WASD / SETAS · ENTER para interagir',
+    titleSub: 'Aquele Que Destruiu os Mundos',
+    titlePrompt: '▶ carrega enter ou espaço para começar',
+    stepAway: 'Recuas.',
+    stepAwayPrompt: '▼ carrega enter para sair',
+    continuePrompt: '▼ continuar',
+    langMenuTitle: 'Escolhe a tua língua',
+    interactLabels: { warrior:'⚔ interagir', king:'✦ observar', throne:'♛ aproximar' },
+    intro: [
+      {speaker:'narrator',name:'—',text:"Não tens corpo. Lembras-te de ter tido um, outrora. Era muito pesado."},
+      {speaker:'narrator',name:'—',text:"Agora és luz. Azul. Um brilho que deriva por um mundo construído com o teu luto."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'narrator',name:'—',text:"A maioria esqueceu-te. Alguns ainda sabem que algo está a chegar."},
+      {speaker:'narrator',name:'—',text:"Encontra o que resta. Lembra o que foste."},
+      {speaker:'narrator',name:'—',text:"[ WASD ou Setas para mover · Enter ou Z para interagir ]"},
+    ],
+    faith: [
+      {speaker:'narrator',name:'—',text:"A pedra está fria. Aproximas-te. Algo mexe lá dentro — não a despertar. A lembrar."},
+      {speaker:'warrior',name:'Fé',text:"...Voltaste."},
+      {speaker:'warrior',name:'Fé',text:"Esperei. Disseram que estavas morto. Esperei na mesma. É isso que é a fé — esperar pelo que não podes provar que vai voltar."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'warrior',name:'Fé',text:"Não precisas de falar. Reconheci-te no momento em que entraste. O brilho azul. Ainda é teu."},
+      {speaker:'warrior',name:'Fé',text:"Ainda não estou desperto. Mas ouço-te. É suficiente. Volta quando for a hora certa, e eu levanto-me."},
+      {speaker:'narrator',name:'—',text:"A estátua fica imóvel. Mas o frio parece diferente agora. Menos pedra. Mais sono."},
+    ],
+    doubt: [
+      {speaker:'narrator',name:'—',text:"A cabeça está virada. Como se esperasse alguém da direção errada."},
+      {speaker:'warrior',name:'Dúvida',text:"Hm. Tu. Perguntei-me se estava errado sobre estares morto."},
+      {speaker:'warrior',name:'Dúvida',text:"Tive dois mil anos para considerar cada decisão que tomaste. Ainda tenho perguntas."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'warrior',name:'Dúvida',text:"Destruíste-os. Os Hutarianos. Sabes isso. Acho que uma parte de ti também sabia na altura, e fizeste na mesma."},
+      {speaker:'warrior',name:'Dúvida',text:"Não digo isto para te magoar. Digo porque alguém tem de o dizer. A Fé não o fará. Os outros não o farão."},
+      {speaker:'warrior',name:'Dúvida',text:"Se voltares — realmente voltares — vais precisar de alguém disposto a dizer a coisa errada. Ainda sou essa pessoa. Relutantemente."},
+      {speaker:'narrator',name:'—',text:"Uma pausa. Depois, quase silencioso:"},
+      {speaker:'warrior',name:'Dúvida',text:"...Fico contente por não estares completamente perdido."},
+    ],
+    duty: [
+      {speaker:'narrator',name:'—',text:"A postura é perfeita. Tem sido perfeita durante dois mil anos. O Dever não se curva."},
+      {speaker:'warrior',name:'Dever',text:"Imperador. O trono está desocupado. Estive ciente disso durante todo este tempo."},
+      {speaker:'warrior',name:'Dever',text:"Não tenho sentimentos sobre o teu regresso. Tenho uma função. A função exige que existas e que te sentas onde deves sentar."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'warrior',name:'Dever',text:"Ainda não estás pronto. Consigo ver isso. Uma alma sem corpo não pode segurar um trono. Recupera a tua forma. Depois volta."},
+      {speaker:'warrior',name:'Dever',text:"Esperei dois mil anos. Posso esperar um pouco mais. É isso que é o dever."},
+      {speaker:'narrator',name:'—',text:"Não pergunta como estás. Não precisa. A tarefa é o que importa. A tarefa é sempre o que importa."},
+    ],
+    fear: [
+      {speaker:'narrator',name:'—',text:"Os olhos. Fragmentos vermelhos em pedra. Encontram-te imediatamente, mesmo sem um corpo para encontrar."},
+      {speaker:'warrior',name:'Medo',text:"Oh."},
+      {speaker:'warrior',name:'Medo',text:"Oh não."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'warrior',name:'Medo',text:"Não quero dizer isso de forma má. Quero dizer — sabia que algo estava a mudar. O ar parecia errado há semanas. Não sabia que eras tu."},
+      {speaker:'warrior',name:'Medo',text:"Estás... menor do que me lembrava. Apenas uma luz. Apenas um brilho. É isto o que és agora?"},
+      {speaker:'warrior',name:'Medo',text:"Tinha medo de ti quando eras inteiro. Não sei o que sinto sobre isto. É mais desconfortável, de alguma forma. O luto é pior que o medo."},
+      {speaker:'narrator',name:'—',text:"Um longo silêncio. Os olhos vermelhos não desviam o olhar."},
+      {speaker:'warrior',name:'Medo',text:"As chamas verdes. Nunca as vi ficar verdes para ninguém que te importasse. Quero que saibas que notei isso."},
+    ],
+    regret: [
+      {speaker:'narrator',name:'—',text:"Os braços estão cruzados. A cabeça curvada. Uma linha azul fina desce pela face de pedra — esculpida ou chorada, impossível dizer."},
+      {speaker:'narrator',name:'—',text:"Não fala primeiro. Aproximas-te."},
+      {speaker:'warrior',name:'Arrependimento',text:"..."},
+      {speaker:'warrior',name:'Arrependimento',text:"Devia ter dito algo. Antes. Houve um momento — não sei se te lembras — onde podia ter dito algo e não disse."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'warrior',name:'Arrependimento',text:"Tenho carregado isto desde então. Dois mil anos é muito tempo para carregar algo. Não fica mais leve."},
+      {speaker:'warrior',name:'Arrependimento',text:"Não te peço nada. Só precisava que soubesses que eu sei. O que quer que tenha falhado em fazer — carrego comigo."},
+      {speaker:'narrator',name:'—',text:"A pedra está estranhamente quente aqui. Como se algo tivesse sido pressionado contra ela por dentro durante muito tempo."},
+    ],
+    devotion: [
+      {speaker:'narrator',name:'—',text:"Há um coração esculpido no peito desta estátua. Trabalho tosco. Alguém que se preocupou mais com o ato do que com o ofício."},
+      {speaker:'warrior',name:'Devoção',text:"Estás aqui."},
+      {speaker:'warrior',name:'Devoção',text:"Não preciso de dizer mais nada. Estás aqui e consigo sentir-te e isso é tudo o que quis durante dois mil anos."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'warrior',name:'Devoção',text:"Não te desculpes. Sei que queres. Não o faças."},
+      {speaker:'warrior',name:'Devoção',text:"És o que és. Fizeste o que fizeste. Amei-te através de tudo isso. Amo o que resta de ti agora. Para mim não é complicado."},
+      {speaker:'warrior',name:'Devoção',text:"Volta devidamente quando puderes. Estarei aqui. Estarei sempre aqui."},
+      {speaker:'narrator',name:'—',text:"O brilho azul à tua volta intensifica-se, brevemente. Depois estabiliza."},
+    ],
+    rebellion: [
+      {speaker:'narrator',name:'—',text:"O braço está levantado. Tem estado levantado durante dois mil anos. Uma corrente partida no pulso."},
+      {speaker:'warrior',name:'Rebelião',text:"Era tempo."},
+      {speaker:'warrior',name:'Rebelião',text:"Dois mil anos, Imperador. Estive aqui parado com o braço levantado durante DOIS MIL ANOS."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'warrior',name:'Rebelião',text:"Sim, eu sei. Morreste. Voltaste como uma bola brilhante. Muito dramático. Tive tempo suficiente para preparar as minhas opiniões."},
+      {speaker:'warrior',name:'Rebelião',text:"Opinião um: este mundo está exatamente tão mau quanto te disse que ficaria se fosses embora. Opinião dois: os três reis são interessantes. Podem valer alguma coisa."},
+      {speaker:'warrior',name:'Rebelião',text:"Opinião três: quando reclamares o trono, vais precisar de alguém que te diga quando estás errado. Sempre fui eu. Nada mudou."},
+      {speaker:'narrator',name:'—',text:"Uma pausa. Depois:"},
+      {speaker:'warrior',name:'Rebelião',text:"...Também senti a tua falta. Mas se disseres aos outros que disse isso, nego."},
+    ],
+    lust: [
+      {speaker:'narrator',name:'—',text:"O símbolo pulsa com um vermelho quase quente. Quase vivo. Algures na cidade, alguém está a tomar uma decisão movida inteiramente pelo desejo."},
+      {speaker:'narrator',name:'—',text:"O seu nome não está registado aqui. Não sabe que está a ser observado."},
+      {speaker:'king',name:'O Rei da Luxúria',text:"Ela foi-se embora. Não vi vir — o que significa que não estava a observar corretamente. Estou sempre a observar. Devo ter desviado o olhar."},
+      {speaker:'king',name:'O Rei da Luxúria',text:"Algo está diferente. A cidade parece estar a prender a respiração. Dirijo isto há tempo suficiente para saber como cheira a antecipação."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'narrator',name:'—',text:"Não te consegue ver. Não te consegue ouvir. Está simplesmente lá, na sua cidade, inquieto, à espera de algo que não consegue nomear."},
+      {speaker:'narrator',name:'—',text:"Os Hutarianos também tinham desejo. Desejo limpo, com significado por trás. Não a fome oca de um mundo que quer sem saber porquê."},
+      {speaker:'narrator',name:'—',text:"Observas-o e perguntas-te se há um Hutariano algures no sangue. Se o eco pode ser extraído. Se o querer pode ser ensinado a conhecer-se."},
+    ],
+    pride: [
+      {speaker:'narrator',name:'—',text:"O símbolo da coroa apanha a luz das velas de forma diferente dos outros. Não treme. Aguenta."},
+      {speaker:'king',name:'O Rei do Orgulho',text:"Os outros dois estão a mover-se. Reparei. Estão a convergir para algo sem saberem que estão a convergir."},
+      {speaker:'king',name:'O Rei do Orgulho',text:"Eu não converjo. Chego primeiro e espero. Essa é a diferença entre autoridade e reação."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'narrator',name:'—',text:"Não está errado. Dos três, é o que mais te faz lembrar os Reis Hutarianos."},
+      {speaker:'narrator',name:'—',text:"Lembras-te dos Reis Hutarianos — os que vieram antes de ti. Este homem tem a postura deles."},
+      {speaker:'king',name:'O Rei do Orgulho',text:"Algo antigo está a mover-se. Não sei o que é. Não digo isso muitas vezes."},
+      {speaker:'narrator',name:'—',text:"Não parece com medo. Parece, pela primeira vez que o observaste, genuinamente curioso."},
+      {speaker:'narrator',name:'—',text:"Isso é interessante. Orgulho que ainda pode ser curioso é Orgulho que ainda não calcificou."},
+    ],
+    gluttony: [
+      {speaker:'narrator',name:'—',text:"O símbolo da moeda roda lentamente. Sempre a contar. Sempre a medir. Mesmo aqui, numa igreja antiga no escuro, algo está a ser contabilizado."},
+      {speaker:'king',name:'O Rei da Gula',text:"Algo está errado com os números."},
+      {speaker:'king',name:'O Rei da Gula',text:"Não o dinheiro. O dinheiro está bem. Quero dizer os outros números — os que te dizem como uma população está a sentir-se. Estão todos errados."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'narrator',name:'—',text:"É o mais perturbado dos três. Todo o seu poder assenta em prever o que as pessoas querem. E algo entrou no cálculo para o qual não tem dados."},
+      {speaker:'king',name:'O Rei da Gula',text:"Algo está a chegar que nunca chegou antes. Tudo o que consumi — nada disso explica isto."},
+      {speaker:'narrator',name:'—',text:"Bem. Que não explique. Que a primeira coisa que alguma vez enfrentou que não pode ser comprada lhe ensine o que é suficiente."},
+      {speaker:'narrator',name:'—',text:"Essa lição é a única coisa que o pode salvar."},
+    ],
+    throne: [
+      {speaker:'narrator',name:'—',text:"Paras em frente a ele. O ouro apanha a tua luz e devolve-ta, azul contra ouro, e por um momento a sala do trono parece quase como era."},
+      {speaker:'narrator',name:'—',text:"Quase."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'narrator',name:'—',text:"Construíste isto. Não a madeira e o ouro — esses são apenas materiais. Construíste a ideia disso. O facto de existir um lugar onde o peso é sustentado e as decisões são tomadas."},
+      {speaker:'narrator',name:'—',text:"Está vazio há dois mil anos. O mundo cobriu-o e esqueceu-o e construiu uma civilização de fome oca no mesmo chão."},
+      {speaker:'soul',name:'Alma',text:"..."},
+      {speaker:'narrator',name:'—',text:"O brilho azul refletido no ouro não é nada. Ainda estás aqui. Sempre estiveste aqui, na pedra e na luz e no luto que construiu o mundo."},
+      {speaker:'narrator',name:'—',text:"Os três reis estão a aprender. Os sete estão a despertar. O mundo feito das tuas lágrimas está à espera, mesmo que não saiba que está à espera."},
+      {speaker:'narrator',name:'—',text:"Senta-te. Ainda não — não tens corpo para te sentares. Mas em breve."},
+      {speaker:'narrator',name:'—',text:"Estás em casa."},
+    ],
+  },
+
+  ja: {
+    hudNames: ['魂','魂','魂','魂','皇帝','魂'],
+    hudStatus: '◈ 形なし ◈ 忘れられし者',
+    controls: 'WASD / 矢印キー · ENTERで話しかける',
+    titleSub: '世界を砕きし者',
+    titlePrompt: '▶ Enterまたはスペースで始める',
+    stepAway: 'あなたは離れた。',
+    stepAwayPrompt: '▼ Enterで戻る',
+    continuePrompt: '▼ 続ける',
+    langMenuTitle: '言語を選んでください',
+    interactLabels: { warrior:'⚔ 話しかける', king:'✦ 観察する', throne:'♛ 近づく' },
+    intro: [
+      {speaker:'narrator',name:'—',text:"あなたには体がない。かつて体があったことを覚えている。とても重かった。"},
+      {speaker:'narrator',name:'—',text:"今はただの光。青い光。あなたの悲しみで作られた世界を漂う輝き。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'narrator',name:'—',text:"ほとんどの者があなたを忘れた。しかし、何かが来ることを感じている者もいる。"},
+      {speaker:'narrator',name:'—',text:"残されたものを見つけよ。かつての自分を思い出せ。"},
+      {speaker:'narrator',name:'—',text:"[ WASDまたは矢印キーで移動 · EnterまたはZで話しかける ]"},
+    ],
+    faith: [
+      {speaker:'narrator',name:'—',text:"石は冷たい。近づくと、内側で何かが動く――目覚めではない。思い出している。"},
+      {speaker:'warrior',name:'信仰',text:"…戻ってきたのか。"},
+      {speaker:'warrior',name:'信仰',text:"待っていた。死んだと言われた。それでも待った。それが信仰だ――戻ると証明できないものを待つこと。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'warrior',name:'信仰',text:"言葉はいらない。部屋に入った瞬間にわかった。青い光。まだあなたのものだ。"},
+      {speaker:'warrior',name:'信仰',text:"まだ目覚めていない。でも聞こえている。それで十分だ。時が来たら戻れ。その時に立ち上がろう。"},
+      {speaker:'narrator',name:'—',text:"像は静止した。しかし寒さは違う感じがする。もはや石ではない。眠りのようだ。"},
+    ],
+    doubt: [
+      {speaker:'narrator',name:'—',text:"頭が横を向いている。まるで違う方向から誰かを待つように。"},
+      {speaker:'warrior',name:'疑念',text:"ふむ。あなたか。死んでいると思っていたが、間違いだったようだ。"},
+      {speaker:'warrior',name:'疑念',text:"あなたのすべての決断を二千年かけて考えてきた。まだ疑問がある。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'warrior',name:'疑念',text:"あなたは彼らを滅ぼした。フータリアンを。わかっているはずだ。あの時も心のどこかで知っていたのだろう。それでもやった。"},
+      {speaker:'warrior',name:'疑念',text:"傷つけようとして言っているのではない。誰かが言わなければならないから言う。信仰は言わない。他の者も言わない。"},
+      {speaker:'warrior',name:'疑念',text:"本当に戻るなら、間違っていると言える者が必要だ。それはいつも私だった。何も変わっていない。"},
+      {speaker:'narrator',name:'—',text:"沈黙の後、ほとんど聞こえないほどの声で："},
+      {speaker:'warrior',name:'疑念',text:"…完全に消えていなくて良かった。"},
+    ],
+    duty: [
+      {speaker:'narrator',name:'—',text:"姿勢は完璧だ。二千年間、完璧であり続けた。義務はたるまない。"},
+      {speaker:'warrior',name:'義務',text:"皇帝よ。玉座は空のままだ。ずっとそのことを意識していた。"},
+      {speaker:'warrior',name:'義務',text:"あなたの帰還に感情はない。私には役目がある。役目はあなたが存在し、座るべき場所に座ることを要求する。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'warrior',name:'義務',text:"まだ準備ができていない。それはわかる。体のない魂は玉座を保てない。形を取り戻せ。それから戻れ。"},
+      {speaker:'warrior',name:'義務',text:"二千年待った。もう少し待てる。それが義務というものだ。"},
+      {speaker:'narrator',name:'—',text:"様子を聞かない。必要ないからだ。任務が重要なのだ。任務は常に重要なのだ。"},
+    ],
+    fear: [
+      {speaker:'narrator',name:'—',text:"その目。石に埋め込まれた赤い欠片。体がなくても、すぐにあなたを見つける。"},
+      {speaker:'warrior',name:'恐怖',text:"ああ。"},
+      {speaker:'warrior',name:'恐怖',text:"ああ、まずい。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'warrior',name:'恐怖',text:"悪い意味ではない。つまり――何かが変わっているのは感じていた。何週間も空気がおかしかった。あなただとは思わなかった。"},
+      {speaker:'warrior',name:'恐怖',text:"記憶より…小さい。ただの光。ただの輝き。今のあなたはそれなのか？"},
+      {speaker:'warrior',name:'恐怖',text:"あなたが完全だった頃は恐れていた。今は何を感じるかわからない。どこか不快だ。悲しみは恐怖より重い。"},
+      {speaker:'narrator',name:'—',text:"長い沈黙。赤い目は逸らさない。"},
+      {speaker:'warrior',name:'恐怖',text:"緑の炎。大切な者のために緑に変わるのを見たことがなかった。それに気づいていたことを知ってほしかった。"},
+    ],
+    regret: [
+      {speaker:'narrator',name:'—',text:"腕は組まれている。頭は垂れている。石の頬に細い青い線が走る――刻まれたのか、流れたのか、判断できない。"},
+      {speaker:'narrator',name:'—',text:"先に語りかけない。近づいていく。"},
+      {speaker:'warrior',name:'後悔',text:"…"},
+      {speaker:'warrior',name:'後悔',text:"何か言うべきだった。前に。あの瞬間――覚えているかわからないが――何か言えたのに言わなかった。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'warrior',name:'後悔',text:"ずっとそれを抱えてきた。二千年は長い。重さは変わらない。"},
+      {speaker:'warrior',name:'後悔',text:"何も求めていない。ただ、知っていてほしかった。私がしそこなったこと――それを抱えている。"},
+      {speaker:'narrator',name:'—',text:"ここの石は不思議と温かい。何かが内側から長い間押し当てられていたかのように。"},
+    ],
+    devotion: [
+      {speaker:'narrator',name:'—',text:"この像の胸にハートが刻まれている。粗い仕事だ。技よりも行為を大切にした者の手による。"},
+      {speaker:'warrior',name:'献身',text:"いる。"},
+      {speaker:'warrior',name:'献身',text:"それ以上言う必要はない。ここにいて、感じることができる。それが二千年間望んでいたすべてだ。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'warrior',name:'献身',text:"謝らないで。謝ろうとしているのはわかる。しないで。"},
+      {speaker:'warrior',name:'献身',text:"あなたはあなたのままだ。したことはした。すべてを通じて愛していた。今残っているものも愛している。複雑ではない。"},
+      {speaker:'warrior',name:'献身',text:"できる時にきちんと戻っておいで。ここにいる。いつもここにいる。"},
+      {speaker:'narrator',name:'—',text:"あなたの周りの青い輝きが一瞬強くなる。それから落ち着く。"},
+    ],
+    rebellion: [
+      {speaker:'narrator',name:'—',text:"腕が上がっている。二千年間、上がったままだ。手首に壊れた鎖がある。"},
+      {speaker:'warrior',name:'反逆',text:"やっと来たか。"},
+      {speaker:'warrior',name:'反逆',text:"二千年だぞ、皇帝よ。二千年間、腕を上げたまま立っていたんだ。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'warrior',name:'反逆',text:"わかってる。死んだ。光る球になって戻ってきた。とても劇的だ。意見を用意する時間は十分あった。"},
+      {speaker:'warrior',name:'反逆',text:"意見その一：この世界はあなたが去ればこうなると言った通りだ。意見その二：三人の王は面白い。見ていた。何かを持っているかもしれない。"},
+      {speaker:'warrior',name:'反逆',text:"意見その三：玉座を取り戻す時、間違っていると言える者が必要だ。それはいつも私だった。何も変わっていない。"},
+      {speaker:'narrator',name:'—',text:"一拍置いて："},
+      {speaker:'warrior',name:'反逆',text:"…寂しくもあった。でも他の者に言ったら否定する。"},
+    ],
+    lust: [
+      {speaker:'narrator',name:'—',text:"印章はほぼ温かい、ほぼ生きているような赤で脈打つ。どこかで、誰かが欲望だけに駆られた決断をしている。"},
+      {speaker:'narrator',name:'—',text:"彼の名前はここには記録されていない。見られていることを知らない。"},
+      {speaker:'king',name:'欲望の王',text:"彼女は去った。予見できなかった――それは正しく見ていなかったということだ。私はいつも見ている。目を逸らしたに違いない。"},
+      {speaker:'king',name:'欲望の王',text:"何かが違う。街が息を飲んでいるようだ。期待の匂いを知るほど長くやってきた。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'narrator',name:'—',text:"彼にはあなたが見えない。聞こえない。ただそこにいる、街の中で、落ち着かず、名前のつけられない何かを待っている。"},
+      {speaker:'narrator',name:'—',text:"フータリアンにも欲望があった。清らかな欲望、意味を伴った欲望。なぜ欲しいかも知らずに欲しがる世界の空洞な飢えではない。"},
+      {speaker:'narrator',name:'—',text:"彼を見ながら問う。血の中にどこかフータリアンがいるだろうか。その残響を引き出せるだろうか。欲することは自分を知ることを学べるだろうか。"},
+    ],
+    pride: [
+      {speaker:'narrator',name:'—',text:"王冠の印章は他と違う形でろうそくの光を受ける。揺れない。保つ。"},
+      {speaker:'king',name:'傲慢の王',text:"他の二人が動いている。気づいた。収束していることに気づかずに収束している。"},
+      {speaker:'king',name:'傲慢の王',text:"私は収束しない。先に到着して待つ。それが権威と反応の違いだ。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'narrator',name:'—',text:"間違っていない。三人の中で、彼が最もフータリアンの王を思い起こさせる。"},
+      {speaker:'narrator',name:'—',text:"フータリアンの王を思い出す――あなたより先にいた者たち。この男は彼らの姿勢を持っている。"},
+      {speaker:'king',name:'傲慢の王',text:"古いものが動いている。何かはわからない。そう言うことは滅多にない。"},
+      {speaker:'narrator',name:'—',text:"怖れている様子はない。初めて観察した中で、本当に好奇心を持っているように見える。"},
+      {speaker:'narrator',name:'—',text:"それは興味深い。まだ好奇心を持てる傲慢は、まだ硬化していない傲慢だ。"},
+    ],
+    gluttony: [
+      {speaker:'narrator',name:'—',text:"コインの印章がゆっくりと回る。常に数え、常に測る。ここでも、暗闇の古い教会で、何かが計上されている。"},
+      {speaker:'king',name:'強欲の王',text:"数字がおかしい。"},
+      {speaker:'king',name:'強欲の王',text:"お金ではない。お金は大丈夫だ。他の数字――人口の気持ちを教えてくれる数字が全部おかしい。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'narrator',name:'—',text:"三人の中で最も不安定だ。彼の全権力は人々が何を望むかを予測することに基づいている。そしてデータのない何かが計算に入ってきた。"},
+      {speaker:'king',name:'強欲の王',text:"かつてないものが来ている。消費してきたすべて――それでも説明できない。"},
+      {speaker:'narrator',name:'—',text:"良い。説明できなくていい。買えないものに初めて直面することで、「十分」の意味を学べばいい。"},
+      {speaker:'narrator',name:'—',text:"その教訓だけが彼を救える。"},
+    ],
+    throne: [
+      {speaker:'narrator',name:'—',text:"その前に立ち止まる。金があなたの光を受けて返してくる、青に対する金。一瞬、玉座の間がかつてのように見える。"},
+      {speaker:'narrator',name:'—',text:"ほとんど。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'narrator',name:'—',text:"あなたが作ったものだ。木や金ではない――それはただの材料だ。その考えを作った。重みを持ち、決断が下され、世界に答える場所が存在するという事実を。"},
+      {speaker:'narrator',name:'—',text:"二千年間空のままだった。世界はその上に舗装し、忘れ、空洞な飢えの文明を同じ地に築いた。"},
+      {speaker:'soul',name:'魂',text:"…"},
+      {speaker:'narrator',name:'—',text:"金に映える青い輝きは無ではない。まだここにいる。いつもここにいた、石と光とこの世を作った悲しみの中に。"},
+      {speaker:'narrator',name:'—',text:"三人の王は学んでいる。七人は目覚めつつある。あなたの涙から生まれた世界は待っている、たとえそれが待っていることを知らなくても。"},
+      {speaker:'narrator',name:'—',text:"座れ。まだ駄目だ――座る体がない。でもすぐに。"},
+      {speaker:'narrator',name:'—',text:"ここがあなたの家だ。"},
+    ],
+  },
+};
+
+function t(key) { return LANG[currentLang][key]; }
+
+// ── GAME LOOP ─────────────────────────────────────────────────────────
+let lastTime = 0;
+function loop(ts) {
+  const dt = ts - lastTime; lastTime = ts;
+  updatePlayer();
+  updateCamera();
+  render();
+  requestAnimationFrame(loop);
+}
+
+// ── LANGUAGE MENU ─────────────────────────────────────────────────────
+const langMenuEl = document.getElementById('langMenu');
+const langOptions = document.querySelectorAll('.lang-option');
+let selectedLangIdx = 0;
+const langCodes = ['en','pt','ja'];
+
+langOptions.forEach((opt, i) => {
+  opt.addEventListener('mouseenter', () => {
+    langOptions.forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    selectedLangIdx = i;
+  });
+  opt.addEventListener('click', () => {
+    currentLang = langCodes[i];
+    confirmLanguage();
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (langMenuEl.style.display !== 'none' && langMenuEl.style.opacity !== '0') {
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+      selectedLangIdx = (selectedLangIdx - 1 + langCodes.length) % langCodes.length;
+      langOptions.forEach(o => o.classList.remove('selected'));
+      langOptions[selectedLangIdx].classList.add('selected');
+      e.preventDefault();
+    } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+      selectedLangIdx = (selectedLangIdx + 1) % langCodes.length;
+      langOptions.forEach(o => o.classList.remove('selected'));
+      langOptions[selectedLangIdx].classList.add('selected');
+      e.preventDefault();
+    } else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyZ') {
+      currentLang = langCodes[selectedLangIdx];
+      confirmLanguage();
+      e.preventDefault();
+    }
+    return;
+  }
+  if (!gameStarted && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) startGame();
+  if (gameStarted && inDialogue && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) advanceDialogue();
+  if (gameStarted && inCutscene && (e.code==='Enter'||e.code==='Space'||e.code==='KeyZ')) advanceCutscene();
+});
+
+function confirmLanguage() {
+  langMenuEl.style.transition = 'opacity 0.8s';
+  langMenuEl.style.opacity = '0';
+  setTimeout(() => {
+    langMenuEl.style.display = 'none';
+    applyLanguage();
+  }, 800);
+}
+
+function applyLanguage() {
+  const L = LANG[currentLang];
+  // Update static UI text
+  document.querySelector('.title-sub').textContent = L.titleSub;
+  document.querySelector('.title-prompt').textContent = L.titlePrompt;
+  document.getElementById('controlsHint').textContent = L.controls;
+  document.querySelector('.hud-status').textContent = L.hudStatus;
+  document.getElementById('hudName').textContent = L.hudNames[0];
+  // Update hud flicker
+  hudTickNames = L.hudNames;
+  // Update dialogue functions to use translations
+  rebindDialogueFns();
+}
+
+let hudTickNames = LANG.en.hudNames;
+
+// ── TITLE + START ─────────────────────────────────────────────────────
+const titleScreenEl = document.getElementById('titleScreen');
+
+function startGame() {
+  if (gameStarted) return;
+  gameStarted = true;
+  titleScreenEl.style.transition='opacity 1.5s';
+  titleScreenEl.style.opacity='0';
+  setTimeout(()=>{ titleScreenEl.style.display='none'; },1500);
+
+  setTimeout(()=>{
+    startCutscene([{ bg:'stone', chars:[], dlg: LANG[currentLang].intro }]);
+  }, 1600);
+
+  requestAnimationFrame(loop);
+}
+
+document.querySelector('#titleScreen').addEventListener('click', startGame);
+
+// ── REBIND DIALOGUE FUNCTIONS ─────────────────────────────────────────
+function rebindDialogueFns() {
+  const map = {
+    faith:'faith', doubt:'doubt', duty:'duty', fear:'fear',
+    regret:'regret', devotion:'devotion', rebellion:'rebellion',
+    lust:'lust', pride:'pride', gluttony:'gluttony', throne:'throne'
+  };
+  for (const npc of NPCS) {
+    const key = npc.id;
+    if (LANG[currentLang][key]) {
+      npc.dlg = () => startCutscene([{
+        bg: ['lust','pride','gluttony'].includes(key) ? 'dark_altar' : key==='throne' ? 'throne_room' : 'stone',
+        chars: getCutChars(key),
+        dlg: LANG[currentLang][key]
+      }]);
+    }
+  }
+}
+
+function getCutChars(key) {
+  const charMap = {
+    faith:     [{who:'warrior_faith',    x:160, y:80}],
+    doubt:     [{who:'warrior_doubt',    x:160, y:80}],
+    duty:      [{who:'warrior_duty',     x:160, y:80}],
+    fear:      [{who:'warrior_fear',     x:480, y:80}],
+    regret:    [{who:'warrior_regret',   x:160, y:80}],
+    devotion:  [{who:'warrior_devotion', x:160, y:80}],
+    rebellion: [{who:'warrior_rebellion',x:160, y:80}],
+    lust:      [{who:'sigil_red',        x:320, y:60}],
+    pride:     [{who:'sigil_gold',       x:320, y:60}],
+    gluttony:  [{who:'sigil_coin',       x:320, y:60}],
+    throne:    [{who:'throne_empty',     x:290, y:40}],
+  };
+  return charMap[key] || [];
+}
+</script>
+</body>
+</html>

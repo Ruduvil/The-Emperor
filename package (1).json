@@ -1,0 +1,11 @@
+{
+  "name": "emperor-the-soul-remembers",
+  "version": "1.0.0",
+  "description": "Emperor — He Who Crashed the Worlds",
+  "scripts": {
+    "start": "npx serve . -l $PORT"
+  },
+  "dependencies": {
+    "serve": "^14.2.3"
+  }
+}
